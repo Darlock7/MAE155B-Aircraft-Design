@@ -1,0 +1,32 @@
+# MATLAB temp/autosave
+*.asv
+*.m~
+*.autosave
+*.mlx.autosave
+
+# MATLAB generated/compiled
+*.mex*
+*.p
+*.slxc
+
+# macOS
+.DS_Store
+
+# Browser/download junk
+*.crdownload
+
+# XFOIL generated files
+xfoil_input_*.inp
+xfoil_polar_*.txt
+:00.bl
+
+# Generated outputs
+results/
+output/
+figures/
+
+# Optional raw data
+data/raw/
+
+# Keep external tools out of version control for now
+external/xfoil/*
