@@ -1,6 +1,6 @@
+%Path Setup
 clc; clear; close all;
-addpath(genpath(pwd));
+repoRoot = fileparts(mfilename('fullpath'));
+addpath(genpath(repoRoot));
 disp('Project paths loaded.');
-
-% Example entry point:
-% preliminarySizingCTOL
+disp(['Repo root: ', repoRoot]);

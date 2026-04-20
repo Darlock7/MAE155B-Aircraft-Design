@@ -1,0 +1,95 @@
+// =========================
+// MAE 155B Wing Variables
+// =========================
+
+// ---------- Primary design variables ----------
+#S = 0.1894 * meter^2
+#AR = 6
+#lambda = 0.55
+#sweepC4 = 30 * degree
+
+// ---------- Reference placement ----------
+#xLEroot = 0 * meter
+#yRoot = 0 * meter
+#zRoot = 0 * meter
+
+// ---------- Derived wing geometry ----------
+#b = sqrt(#AR * #S)
+#semiSpan = #b / 2
+
+#cRoot = (2 * #S) / (#b * (1 + #lambda))
+#cTip = #lambda * #cRoot
+
+#MAC = (2 / 3) * #cRoot * ((1 + #lambda + #lambda^2) / (1 + #lambda))
+
+// ---------- Sweep conversions ----------
+#sweepLE = atan(tan(#sweepC4) + (1 - #lambda) / #AR)
+
+#xLEtip = #xLEroot + #semiSpan * tan(#sweepLE)
+
+#xTEroot = #xLEroot + #cRoot
+#xTEtip = #xLEtip + #cTip
+
+#sweepTE = atan((#xTEtip - #xTEroot) / #semiSpan)
+
+// ---------- MAC location ----------
+#yMAC = #semiSpan * (1 + 2 * #lambda) / (3 * (1 + #lambda))
+#xLE_MAC = #xLEroot + #yMAC * tan(#sweepLE)
+#xQuarterMAC = #xLE_MAC + 0.25 * #MAC
+
+// ---------- Useful quarter-chord references ----------
+#xQuarterRoot = #xLEroot + 0.25 * #cRoot
+#xQuarterTip = #xLEtip + 0.25 * #cTip
+
+// ---------- Control surface defaults ----------
+#etaCSstart = 0.60
+#etaCSend = 0.90
+#csChordFrac = 0.25
+
+#yCSstart = #etaCSstart * #semiSpan
+#yCSend = #etaCSend * #semiSpan
+
+#cCSstart = #cRoot - (#cRoot - #cTip) * (#yCSstart / #semiSpan)
+#cCSend = #cRoot - (#cRoot - #cTip) * (#yCSend / #semiSpan)
+
+#xLE_CSstart = #xLEroot + #yCSstart * tan(#sweepLE)
+#xLE_CSend = #xLEroot + #yCSend * tan(#sweepLE)
+
+#xTE_CSstart = #xLE_CSstart + #cCSstart
+#xTE_CSend = #xLE_CSend + #cCSend
+
+#csDepthStart = #csChordFrac * #cCSstart
+#csDepthEnd = #csChordFrac * #cCSend
+
+#xHingeStart = #xTE_CSstart - #csDepthStart
+#xHingeEnd = #xTE_CSend - #csDepthEnd
+
+// =========================
+// Vertical surface / winglet
+// =========================
+
+#Sv = 0.0226 * meter^2
+#ARv = 2
+#lambdaV = 0.60
+#sweepC4v = 30 * degree
+
+#xLErootV = #xLEtip
+#yRootV = #semiSpan
+#zRootV = 0 * meter
+
+#topFrac = 0.66
+
+#bv = sqrt(#ARv * #Sv)
+#cRootV = (2 * #Sv) / (#bv * (1 + #lambdaV))
+#cTipV = #lambdaV * #cRootV
+#MACv = (2 / 3) * #cRootV * ((1 + #lambdaV + #lambdaV^2) / (1 + #lambdaV))
+
+#zTop = #topFrac * #bv
+#zBottom = (1 - #topFrac) * #bv
+
+#xQuarterRootV = #xLErootV + 0.25 * #cRootV
+#xQuarterTopV = #xQuarterRootV + #zTop * tan(#sweepC4v)
+#xQuarterBottomV = #xQuarterRootV + #zBottom * tan(#sweepC4v)
+
+#xLEtopV = #xQuarterTopV - 0.25 * #cTipV
+#xLEbottomV = #xQuarterBottomV - 0.25 * #cTipV
