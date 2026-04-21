@@ -29,8 +29,8 @@
 %               plotAircraftGeometry3D(...)
 % Version 13.0: Organizes user input into blocks USER Input, and 
 %               CAD Design Variables
-% Version 14.0: replaces runtime XFOIL calls with prebuilt Reynolds-based
-%               airfoil surrogate database generated offline from XFOIL
+
+
 clc; clearvars; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
