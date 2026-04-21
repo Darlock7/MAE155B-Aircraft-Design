@@ -1,6 +1,9 @@
 function plotAircraftGeometry3D(geom3DIn)
 % plotAircraftGeometry3D
 % Clean 3D aircraft geometry visualization
+%
+% Geometry convention:
+%   Supply RIGHT wing geometry only; function mirrors about y = 0.
 
     arguments
         geom3DIn struct
@@ -8,8 +11,9 @@ function plotAircraftGeometry3D(geom3DIn)
 
     %% ---------------- Required checks ----------------
     req = { ...
-        'b_m','b_half_m','c_root_m','c_tip_m', ...
-        'xLE_root_m','y_root_m','z_root_m','xLE_tip_m', ...
+        'c_root_m','c_tip_m', ...
+        'xLE_root_m','y_root_m','z_root_m', ...
+        'xLE_tip_m', ...
         'xLE_MAC_m','y_MAC_m','MAC_m', ...
         'twist_root_deg','twist_tip_deg'};
 
@@ -23,12 +27,16 @@ function plotAircraftGeometry3D(geom3DIn)
     if ~isfield(geom3DIn,'plotVertical'); geom3DIn.plotVertical = false; end
     if ~isfield(geom3DIn,'plotBody');     geom3DIn.plotBody     = false; end
     if ~isfield(geom3DIn,'plotCG');       geom3DIn.plotCG       = false; end
+
     if ~isfield(geom3DIn,'xBody_m'); geom3DIn.xBody_m = 0; end
-if ~isfield(geom3DIn,'yBody_m'); geom3DIn.yBody_m = 0; end
-if ~isfield(geom3DIn,'zBody_m'); geom3DIn.zBody_m = 0; end
+    if ~isfield(geom3DIn,'yBody_m'); geom3DIn.yBody_m = 0; end
+    if ~isfield(geom3DIn,'zBody_m'); geom3DIn.zBody_m = 0; end
+
+    if ~isfield(geom3DIn,'z_MAC_m')
+        geom3DIn.z_MAC_m = geom3DIn.z_root_m;
+    end
 
     %% ---------------- Pull variables ----------------
-    b_half = geom3DIn.b_half_m;
     c_root = geom3DIn.c_root_m;
     c_tip  = geom3DIn.c_tip_m;
 
@@ -37,11 +45,25 @@ if ~isfield(geom3DIn,'zBody_m'); geom3DIn.zBody_m = 0; end
     z_root   = geom3DIn.z_root_m;
 
     xLE_tip = geom3DIn.xLE_tip_m;
-    y_tip   = y_root + b_half;
-    z_tip   = z_root;
+
+    % Backward-compatible tip coordinates
+    if isfield(geom3DIn,'yLE_tip_m')
+        y_tip = geom3DIn.yLE_tip_m;
+    elseif isfield(geom3DIn,'b_half_m')
+        y_tip = y_root + geom3DIn.b_half_m;
+    else
+        error('Missing required input field: yLE_tip_m (or fallback b_half_m).');
+    end
+
+    if isfield(geom3DIn,'zLE_tip_m')
+        z_tip = geom3DIn.zLE_tip_m;
+    else
+        z_tip = z_root;
+    end
 
     xLE_MAC = geom3DIn.xLE_MAC_m;
     y_MAC   = geom3DIn.y_MAC_m;
+    z_MAC   = geom3DIn.z_MAC_m;
     MAC     = geom3DIn.MAC_m;
 
     %% ---------------- Figure ----------------
@@ -50,16 +72,17 @@ if ~isfield(geom3DIn,'zBody_m'); geom3DIn.zBody_m = 0; end
     xlabel('x [m]'); ylabel('y [m]'); zlabel('z [m]');
     title('3D Aircraft Geometry');
 
-    %% ---------------- Wing outlines ----------------
-    P1 = [xLE_root, y_root, z_root];
+    %% ---------------- Wing outlines (right wing) ----------------
+    P1 = [xLE_root,          y_root, z_root];
     P2 = [xLE_root + c_root, y_root, z_root];
-    P3 = [xLE_tip + c_tip, y_tip, z_tip];
-    P4 = [xLE_tip, y_tip, z_tip];
+    P3 = [xLE_tip  + c_tip,  y_tip,  z_tip];
+    P4 = [xLE_tip,           y_tip,  z_tip];
 
-    P1L = [xLE_root, -y_root, z_root];
+    %% ---------------- Wing outlines (left wing mirror) ----------------
+    P1L = [xLE_root,          -y_root, z_root];
     P2L = [xLE_root + c_root, -y_root, z_root];
-    P3L = [xLE_tip + c_tip, -y_tip, z_tip];
-    P4L = [xLE_tip, -y_tip, z_tip];
+    P3L = [xLE_tip  + c_tip,  -y_tip,  z_tip];
+    P4L = [xLE_tip,           -y_tip,  z_tip];
 
     plot3([P1(1) P2(1) P3(1) P4(1) P1(1)], ...
           [P1(2) P2(2) P3(2) P4(2) P1(2)], ...
@@ -70,50 +93,48 @@ if ~isfield(geom3DIn,'zBody_m'); geom3DIn.zBody_m = 0; end
           [P1L(3) P2L(3) P3L(3) P4L(3) P1L(3)], 'k','LineWidth',1.8);
 
     %% ---------------- Chord lines ----------------
-    plotTwistedChord([xLE_root,y_root,z_root], c_root, geom3DIn.twist_root_deg,'b-');
-    plotTwistedChord([xLE_root,-y_root,z_root], c_root, geom3DIn.twist_root_deg,'b-');
+    plotTwistedChord([xLE_root,  y_root,  z_root], c_root, geom3DIn.twist_root_deg,'b-');
+    plotTwistedChord([xLE_root, -y_root,  z_root], c_root, geom3DIn.twist_root_deg,'b-');
 
-    plotTwistedChord([xLE_tip,y_tip,z_tip], c_tip, geom3DIn.twist_tip_deg,'c-');
-    plotTwistedChord([xLE_tip,-y_tip,z_tip], c_tip, geom3DIn.twist_tip_deg,'c-');
+    plotTwistedChord([xLE_tip,   y_tip,   z_tip],  c_tip,  geom3DIn.twist_tip_deg,'c-');
+    plotTwistedChord([xLE_tip,  -y_tip,   z_tip],  c_tip,  geom3DIn.twist_tip_deg,'c-');
 
     %% ---------------- MAC ----------------
-    plot3([xLE_MAC xLE_MAC+MAC],[y_MAC y_MAC],[0 0],'r','LineWidth',3);
-    plot3([xLE_MAC xLE_MAC+MAC],[-y_MAC -y_MAC],[0 0],'r','LineWidth',3);
+    plot3([xLE_MAC xLE_MAC+MAC],[ y_MAC  y_MAC],[z_MAC z_MAC],'r','LineWidth',3);
+    plot3([xLE_MAC xLE_MAC+MAC],[-y_MAC -y_MAC],[z_MAC z_MAC],'r','LineWidth',3);
 
-  %% ===================== PACKAGE AT CG =====================
-if geom3DIn.plotBody
+    %% ---------------- Package / body ----------------
+    if geom3DIn.plotBody
 
-    % Dimensions
-    L = geom3DIn.bodyLength_m;
-    W = geom3DIn.bodyWidth_m;
-    H = geom3DIn.bodyHeight_m;
+        L = geom3DIn.bodyLength_m;
+        W = geom3DIn.bodyWidth_m;
+        H = geom3DIn.bodyHeight_m;
 
-    % CG required
-    x_cg = geom3DIn.xCG_m;
-    y_cg = geom3DIn.yCG_m;
-    z_cg = geom3DIn.zCG_m;
+        x_cg = geom3DIn.xCG_m;
+        y_cg = geom3DIn.yCG_m;
+        z_cg = geom3DIn.zCG_m;
 
-    % Center box at CG
-    x0 = x_cg - L/2;
-    y0 = y_cg - W/2;
-    z0 = z_cg - H/2;
+        x0 = x_cg - L/2;
+        y0 = y_cg - W/2;
+        z0 = z_cg - H/2;
 
-    X = [0 1 1 0 0 1 1 0]*L + x0;
-    Y = [0 0 1 1 0 0 1 1]*W + y0;
-    Z = [0 0 0 0 1 1 1 1]*H + z0;
+        X = [0 1 1 0 0 1 1 0]*L + x0;
+        Y = [0 0 1 1 0 0 1 1]*W + y0;
+        Z = [0 0 0 0 1 1 1 1]*H + z0;
 
-    faces = [1 2 3 4;5 6 7 8;1 2 6 5;2 3 7 6;3 4 8 7;4 1 5 8];
+        faces = [1 2 3 4;5 6 7 8;1 2 6 5;2 3 7 6;3 4 8 7;4 1 5 8];
 
-    patch('Vertices',[X' Y' Z'], ...
-          'Faces',faces, ...
-          'FaceColor',[0.3 0.3 0.8], ...
-          'FaceAlpha',0.4, ...
-          'EdgeColor','none');
-end
+        patch('Vertices',[X' Y' Z'], ...
+              'Faces',faces, ...
+              'FaceColor',[0.3 0.3 0.8], ...
+              'FaceAlpha',0.4, ...
+              'EdgeColor','none');
+    end
+
     %% ---------------- CG marker ----------------
     if geom3DIn.plotCG
         plot3(geom3DIn.xCG_m, geom3DIn.yCG_m, geom3DIn.zCG_m, ...
-            'ro','MarkerFaceColor','r','MarkerSize',6);
+            'ro','MarkerFaceColor','r','MarkerSize',7);
     end
 
     %% ---------------- Vertical surfaces ----------------

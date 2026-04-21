@@ -383,8 +383,8 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0;
-wingIn.y_root_m   = 0.0;
+wingIn.xLE_root_m = 0.085; % Imported from OnShape 4/20/2026
+wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
 % First-pass elevon / control-surface assumptions
@@ -725,31 +725,32 @@ plotSpanwiseAeroEstimate(spanOut);
 
 geom3DIn = struct();
 
-% -------- Main wing geometry --------
-geom3DIn.b_m        = b;
-geom3DIn.b_half_m   = b_half;
-geom3DIn.c_root_m   = c_root;
-geom3DIn.c_tip_m    = c_tip;
+geom3DIn.b_m        = wingOut.b_m;
+geom3DIn.b_half_m   = wingOut.b_m / 2;
+
+geom3DIn.c_root_m   = wingOut.c_root_m;
+geom3DIn.c_tip_m    = wingOut.c_tip_m;
 
 geom3DIn.xLE_root_m = wingIn.xLE_root_m;
 geom3DIn.y_root_m   = wingIn.y_root_m;
 geom3DIn.z_root_m   = wingIn.z_root_m;
 
-geom3DIn.xLE_tip_m  = xLE_tip;
+geom3DIn.xLE_tip_m  = wingOut.xLE_tip_m;
+geom3DIn.yLE_tip_m  = wingIn.y_root_m + wingOut.semiSpan_m;
+geom3DIn.zLE_tip_m  = wingIn.z_root_m;
 
-geom3DIn.xLE_MAC_m  = xLE_MAC;
-geom3DIn.y_MAC_m    = y_MAC;
-geom3DIn.MAC_m      = MAC;
+geom3DIn.xLE_MAC_m  = wingOut.xLE_MAC_m;
+geom3DIn.y_MAC_m    = wingOut.y_MAC_m;
+geom3DIn.z_MAC_m    = wingIn.z_root_m;
+geom3DIn.MAC_m      = wingOut.MAC_m;
 
-% -------- Twist --------
 geom3DIn.twist_root_deg = twistOut.twist_root_deg;
 geom3DIn.twist_tip_deg  = twistOut.twist_tip_deg;
 
-% -------- Vertical surfaces --------
-% vertOut now stores SINGLE-fin geometry.
-% The plotting function mirrors that geometry left/right when plotVertical = true.
 geom3DIn.plotVertical = true;
-geom3DIn.vertOut = vertOut;
+geom3DIn.plotBody     = true;
+geom3DIn.plotCG       = true;
+geom3DIn.vertOut      = vertOut;
 
 % -------- Simple Volume Package reference --------
 geom3DIn.plotBody = true;
@@ -780,8 +781,106 @@ geom3DIn.z_cg = 0;
 
 %% =============== CL, CD, plots ==================
 
-%% ============== Static Stability Analysis ===========
-
+% %% ============== Static Stability Analysis ===========
+% 
+% % Purpose:
+% %   Build total aircraft mass properties using CAD-based empty-airframe
+% %   values plus discrete components, then compute CG location, CG as %MAC,
+% %   and static margin using a supplied or approximate neutral point.
+% %
+% % Notes:
+% %   - SI units only
+% %   - x positive aft
+% %   - y positive right
+% %   - z positive up
+% %   - Neutral point should ultimately come from AVL / aero model
+% %
+% % Required geometry inputs from wingGeometryDesign (or equivalent):
+% %   wingOut.S_ref_m2
+% %   wingOut.b_m
+% %   wingOut.cMAC_m
+% %   wingOut.xLEMAC_m
+% %
+% % Optional:
+% %   wingOut.xAC_wing_m   % if you already compute this
+% %
+% % Assumption for temporary use only:
+% %   If no neutral point is available, use wing AC ~= xLEMAC + 0.25*cMAC
+% %   This is only a placeholder for early iteration.
+% 
+% % ---------- CAD-derived empty airframe ----------
+% cadMass.emptyAirframe.mass_kg = 0.99727226;
+% cadMass.emptyAirframe.cg_m    = [0.26519, -0.00009, 0.01560];
+% 
+% % Inertia tensor from CAD about empty-airframe CG [kg*m^2]
+% cadMass.emptyAirframe.Icg_kgm2 = 1e-4 * [ ...
+%     1307.911,   0.153,  -0.748;
+%        0.153, 272.945,   0.113;
+%       -0.748,   0.113, 1565.041 ];
+% 
+% % ---------- Optional: fuselage-only CAD data ----------
+% cadMass.fuselage.mass_kg = 0.605;
+% cadMass.fuselage.cg_m    = [0.19237805, -0.00013, 0.02017];
+% 
+% cadMass.fuselage.Icg_kgm2 = 1e-4 * [ ...
+%      24.292,   0.177,  -0.679;
+%       0.177, 112.664,  -0.024;
+%      -0.679, -0.024, 129.372 ];
+% 
+% % ---------- Component mass build-up ----------
+% % Replace these with your current values / variables as you refine.
+% comp = [];
+% 
+% % Example helper pattern:
+% % comp(end+1) = makePointMass('battery',   m_batt_kg, [x_batt_m, y_batt_m, z_batt_m]);
+% % comp(end+1) = makePointMass('motor',     m_motor_kg, [x_motor_m, y_motor_m, z_motor_m]);
+% % comp(end+1) = makePointMass('esc',       m_esc_kg,   [x_esc_m,   y_esc_m,   z_esc_m]);
+% % comp(end+1) = makePointMass('rx',        m_rx_kg,    [x_rx_m,    y_rx_m,    z_rx_m]);
+% % comp(end+1) = makePointMass('payload',   m_pay_kg,   [x_pay_m,   y_pay_m,   z_pay_m]);
+% % comp(end+1) = makePointMass('ballast',   m_bal_kg,   [x_bal_m,   y_bal_m,   z_bal_m]);
+% 
+% % ---------- Static stability inputs ----------
+% stabIn = struct();
+% 
+% % Geometry references
+% stabIn.cMAC_m   = wingOut.cMAC_m;
+% stabIn.xLEMAC_m = wingOut.xLEMAC_m;
+% stabIn.Sref_m2  = wingOut.S_ref_m2;
+% stabIn.b_m      = wingOut.b_m;
+% 
+% % Empty airframe from CAD
+% stabIn.emptyMass = cadMass.emptyAirframe;
+% 
+% % Additional discrete components
+% stabIn.components = comp;
+% 
+% % ---- Neutral point choice ----
+% % Preferred: from AVL / aero function
+% % stabIn.xNP_m = aeroOut.xNP_m;
+% 
+% % Temporary fallback if AVL not ready:
+% stabIn.useApproxNP = true;
+% stabIn.xACwingApprox_m = wingOut.xLEMAC_m + 0.25 * wingOut.cMAC_m;
+% 
+% % Optional target range
+% stabIn.SM_target_min = 0.05;
+% stabIn.SM_target_max = 0.20;
+% 
+% stabOut = staticStabilityAnalysis(stabIn);
+% 
+% fprintf('\n===== Static Stability Summary =====\n');
+% fprintf('Total mass                : %.4f kg\n', stabOut.mass_kg);
+% fprintf('CG location               : [%.4f, %.4f, %.4f] m\n', stabOut.cg_m(1), stabOut.cg_m(2), stabOut.cg_m(3));
+% fprintf('CG as %%MAC                : %.2f %%\n', 100*stabOut.xcg_over_MAC);
+% fprintf('Neutral point as %%MAC     : %.2f %%\n', 100*stabOut.xnp_over_MAC);
+% fprintf('Static margin             : %.2f %%\n', 100*stabOut.SM);
+% fprintf('Longitudinal static stable: %s\n', string(stabOut.isStaticallyStable));
+% fprintf('In target SM band         : %s\n', string(stabOut.inTargetBand));
+% 
+% if stabOut.usedApproxNP
+%     fprintf('WARNING: Neutral point currently uses approximate wing AC only.\n');
+%     fprintf('         Replace with AVL / aero-based xNP before trusting final results.\n');
+% end
 %% =========== V-n Diagram ===================
 
 %% =============== Dynamic Stability Analysis (AVL) ==============
