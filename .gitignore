@@ -28,5 +28,8 @@ figures/
 # Optional raw data
 data/raw/
 
-# Keep external tools out of version control for now
-external/xfoil/*
+# Ignore XFOIL installers/source, but keep runtime executables
+external/xfoil/*.zip
+external/xfoil/*.dmg
+external/xfoil/src_optional/
+external/xfoil/Xfoil699src/
