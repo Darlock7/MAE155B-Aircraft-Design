@@ -422,7 +422,7 @@ fprintf('Trailing-edge sweep         = %.3f deg\n', sweep_TE_deg);
 fprintf('MAC span station y_MAC      = %.4f m\n', y_MAC);
 fprintf('MAC LE x-location xLE_MAC   = %.4f m\n', xLE_MAC);
 fprintf('MAC c/4 x-location          = %.4f m\n', x_c4_MAC);
-fprintf('Tip LE x-location xLE_tip   = %.4f m\n', xLE_tip);
+fprintf('Tip LE x-location xLE_tip   = %.4f m\n\n', xLE_tip);
 
 %% ============== Airfoil Selection & Analysis (Surrogate) ===============
 fprintf('================ Airfoil Analysis (Surrogate) ================\n');
@@ -478,6 +478,86 @@ fprintf('Best L/D                  = %.5f\n', airfoilOut.tip.bestLD);
 
 fprintf('\nAerodynamic twist         = %.5f deg\n', airfoilOut.aeroTwist_deg);
 fprintf('===============================================================\n\n');
+
+%% ============== Airfoil Polar Plots (Surrogate) ===============
+fprintf('================ Airfoil Polar Plots (Surrogate) ================\n');
+
+% -------- Alpha grid for plotting --------
+alpha_plot_deg = (-4:0.25:10).';
+
+% -------- Evaluate surrogate polars at current Reynolds numbers --------
+rootPolarPlot = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilRootName, Re_root, alpha_plot_deg);
+tipPolarPlot  = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilTipName,  Re_tip,  alpha_plot_deg);
+
+% -------- 1) CL vs alpha --------
+figure;
+plot(rootPolarPlot.alpha_deg, rootPolarPlot.CL, 'LineWidth', 2); hold on;
+plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CL,  'LineWidth', 2);
+grid on;
+xlabel('\alpha [deg]');
+ylabel('C_L [-]');
+title(sprintf('Section Lift Curve at Re_{root}=%.2e, Re_{tip}=%.2e', Re_root, Re_tip));
+legend(sprintf('Root: %s', rootPolarPlot.name), ...
+       sprintf('Tip: %s',  tipPolarPlot.name), ...
+       'Location','best');
+
+% -------- 2) CD vs alpha --------
+figure;
+plot(rootPolarPlot.alpha_deg, rootPolarPlot.CD, 'LineWidth', 2); hold on;
+plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CD,  'LineWidth', 2);
+grid on;
+xlabel('\alpha [deg]');
+ylabel('C_D [-]');
+title(sprintf('Section Drag Curve at Re_{root}=%.2e, Re_{tip}=%.2e', Re_root, Re_tip));
+legend(sprintf('Root: %s', rootPolarPlot.name), ...
+       sprintf('Tip: %s',  tipPolarPlot.name), ...
+       'Location','best');
+
+% -------- 3) CM vs alpha --------
+figure;
+plot(rootPolarPlot.alpha_deg, rootPolarPlot.CM, 'LineWidth', 2); hold on;
+plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CM,  'LineWidth', 2);
+grid on;
+xlabel('\alpha [deg]');
+ylabel('C_M [-]');
+title(sprintf('Section Pitching Moment Curve at Re_{root}=%.2e, Re_{tip}=%.2e', Re_root, Re_tip));
+legend(sprintf('Root: %s', rootPolarPlot.name), ...
+       sprintf('Tip: %s',  tipPolarPlot.name), ...
+       'Location','best');
+
+% -------- 4) Drag polar: CL vs CD --------
+figure;
+plot(rootPolarPlot.CD, rootPolarPlot.CL, 'LineWidth', 2); hold on;
+plot(tipPolarPlot.CD,  tipPolarPlot.CL,  'LineWidth', 2);
+grid on;
+xlabel('C_D [-]');
+ylabel('C_L [-]');
+title(sprintf('Section Drag Polar at Re_{root}=%.2e, Re_{tip}=%.2e', Re_root, Re_tip));
+legend(sprintf('Root: %s', rootPolarPlot.name), ...
+       sprintf('Tip: %s',  tipPolarPlot.name), ...
+       'Location','best');
+
+% -------- 5) L/D vs alpha --------
+LD_root = rootPolarPlot.CL ./ rootPolarPlot.CD;
+LD_tip  = tipPolarPlot.CL  ./ tipPolarPlot.CD;
+
+LD_root(~isfinite(LD_root)) = nan;
+LD_tip(~isfinite(LD_tip))   = nan;
+
+figure;
+plot(rootPolarPlot.alpha_deg, LD_root, 'LineWidth', 2); hold on;
+plot(tipPolarPlot.alpha_deg,  LD_tip,  'LineWidth', 2);
+grid on;
+xlabel('\alpha [deg]');
+ylabel('L/D [-]');
+title(sprintf('Section L/D vs \\alpha at Re_{root}=%.2e, Re_{tip}=%.2e', Re_root, Re_tip));
+legend(sprintf('Root: %s', rootPolarPlot.name), ...
+       sprintf('Tip: %s',  tipPolarPlot.name), ...
+       'Location','best');
+
+fprintf('Generated surrogate polar plots for root and tip airfoils.\n');
+fprintf('===================================================================\n\n');
+
 %% ================= Twist Function (Panknin) ===============
 
 twistIn = struct();
@@ -574,9 +654,9 @@ vertIn.toe_deg  = 0.0;
 vertIn.topFrac = 0.66;
 
 % ---------- Mounting at wing tip ----------
-vertIn.xLE_root_v_m = xLE_tip;
-vertIn.y_root_v_m   = b_half;
-vertIn.z_root_v_m   = 0.0;
+vertIn.xLE_root_v_m = wingOut.xLE_tip_m;
+vertIn.y_root_v_m   = wingIn.y_root_m + wingOut.semiSpan_m;
+vertIn.z_root_v_m   = wingIn.z_root_m;
 
 % ---------- Airfoil ----------
 vertIn.airfoilName = 'NACA0010';
@@ -700,34 +780,32 @@ fprintf('Tip  effective alpha       = %.3f deg\n', spanOut.alpha_eff_deg(end));
 fprintf('=========================================================\n\n');
 
 plotSpanwiseAeroEstimate(spanOut);
-%% =============== 3D Geometry Plot & Sanity Check =========
-%Vp ratios:
-% Vp_Width = b * .3;
-% Vp_Hight = b * .1;
-% Vp_fwdArea = Vp_Width * Vp_Hight;
-% Vp_Length = Vp_fwdArea / Vp;
 
+%% =============== 3D Geometry Plot & Sanity Check =========
 
 geom3DIn = struct();
 
-geom3DIn.b_m        = wingOut.b_m;
-geom3DIn.b_half_m   = wingOut.b_m / 2;
+geom3DIn.b_m      = wingOut.b_m;
+geom3DIn.b_half_m = wingOut.b_m / 2;
 
-geom3DIn.c_root_m   = wingOut.c_root_m;
-geom3DIn.c_tip_m    = wingOut.c_tip_m;
+geom3DIn.c_root_m = wingOut.c_root_m;
+geom3DIn.c_tip_m  = wingOut.c_tip_m;
 
+% -------- Absolute wing root --------
 geom3DIn.xLE_root_m = wingIn.xLE_root_m;
 geom3DIn.y_root_m   = wingIn.y_root_m;
 geom3DIn.z_root_m   = wingIn.z_root_m;
 
+% -------- Absolute wing tip --------
 geom3DIn.xLE_tip_m  = wingOut.xLE_tip_m;
 geom3DIn.yLE_tip_m  = wingIn.y_root_m + wingOut.semiSpan_m;
 geom3DIn.zLE_tip_m  = wingIn.z_root_m;
 
-geom3DIn.xLE_MAC_m  = wingOut.xLE_MAC_m;
-geom3DIn.y_MAC_m    = wingOut.y_MAC_m;
-geom3DIn.z_MAC_m    = wingIn.z_root_m;
-geom3DIn.MAC_m      = wingOut.MAC_m;
+% -------- Absolute MAC --------
+geom3DIn.xLE_MAC_m = wingOut.xLE_MAC_m;
+geom3DIn.y_MAC_m   = wingIn.y_root_m + wingOut.y_MAC_m;
+geom3DIn.z_MAC_m   = wingIn.z_root_m;
+geom3DIn.MAC_m     = wingOut.MAC_m;
 
 geom3DIn.twist_root_deg = twistOut.twist_root_deg;
 geom3DIn.twist_tip_deg  = twistOut.twist_tip_deg;
@@ -735,32 +813,21 @@ geom3DIn.twist_tip_deg  = twistOut.twist_tip_deg;
 geom3DIn.plotVertical = true;
 geom3DIn.plotBody     = true;
 geom3DIn.plotCG       = true;
-geom3DIn.vertOut      = vertOut;
 
-% -------- Simple Volume Package reference --------
-geom3DIn.plotBody = true;
+% -------- Vertical surfaces: already in absolute coordinates --------
+geom3DIn.vertOut = vertOut;
 
-% Simple cube from required package volume only
+% -------- Simple package box --------
 geom3DIn.bodyLength_m = Vp^(1/3);
 geom3DIn.bodyWidth_m  = Vp^(1/3);
 geom3DIn.bodyHeight_m = Vp^(1/3);
 
-% Temporary: place simple package box at current assumed CG marker
+% Temporary CG marker
 geom3DIn.xCG_m = x_c4_MAC;
 geom3DIn.yCG_m = 0.0;
 geom3DIn.zCG_m = 0.0;
 
-% -------- CG marker --------
-geom3DIn.plotCG = true;
-geom3DIn.xCG_m = x_c4_MAC;
-geom3DIn.yCG_m = 0.0;
-geom3DIn.zCG_m = 0.0;
-% -------- Plot --------
 plotAircraftGeometry3D(geom3DIn);
-
-geom3DIn.x_cg = x_c4_MAC;   % from your mass / geometry calc
-geom3DIn.y_cg = 0;
-geom3DIn.z_cg = 0;
 
 %% ================ Drag build up ==================
 
