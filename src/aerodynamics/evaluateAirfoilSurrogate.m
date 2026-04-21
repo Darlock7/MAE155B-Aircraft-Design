@@ -4,27 +4,6 @@ function out = evaluateAirfoilSurrogate(airfoilDB, foilName, Re, alpha_deg)
 % Purpose:
 %   Evaluate a prebuilt airfoil surrogate at a requested Reynolds number
 %   and optionally at one or more alpha values.
-%
-% Inputs:
-%   airfoilDB   : struct loaded from airfoilDB.mat
-%   foilName    : char/string
-%   Re          : scalar Reynolds number [-]
-%   alpha_deg   : optional scalar/vector [deg]
-%
-% Outputs:
-%   out.name
-%   out.Re
-%   out.Cla_per_deg
-%   out.alphaL0_deg
-%   out.Cm0
-%   out.Cl_max
-%   out.bestLD
-%
-%   If alpha_deg is provided:
-%   out.alpha_deg
-%   out.CL
-%   out.CD
-%   out.CM
 
     arguments
         airfoilDB struct
@@ -36,7 +15,6 @@ function out = evaluateAirfoilSurrogate(airfoilDB, foilName, Re, alpha_deg)
     idx = findAirfoilInDB(airfoilDB, foilName);
     foil = airfoilDB.foils(idx);
 
-    % Reynolds range check
     Re_min = min(airfoilDB.meta.Re_grid);
     Re_max = max(airfoilDB.meta.Re_grid);
 

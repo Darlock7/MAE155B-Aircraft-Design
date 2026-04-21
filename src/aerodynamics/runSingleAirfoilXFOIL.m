@@ -3,26 +3,22 @@ function foilOut = runSingleAirfoilXFOIL(foilName, Re, alpha_deg, opts)
 %
 % Purpose:
 %   Thin wrapper around existing airfoilAnalysisXFOIL(...) so that one foil
-%   can be run at one Reynolds number using the already-developed parser.
+%   can be run at one Reynolds number.
 %
 % Inputs:
-%   foilName    : char/string, e.g. 'e222.dat' or 'NACA4415'
+%   foilName    : char/string, e.g. 'e222.dat'
 %   Re          : scalar Reynolds number [-]
-%   alpha_deg   : vector of angle of attack values [deg]
+%   alpha_deg   : vector [deg]
 %   opts        : struct with fields:
 %                   .xfoilFolder
+%                   .airfoilFolder
 %                   .Mach
 %                   .maxIter
 %                   .cleanupFiles
-%                   .printSummary   (optional)
-%                   .airfoilFolder  (optional)
+%                   .printSummary
 %
 % Output:
 %   foilOut     : struct containing one-airfoil polar + derived metrics
-%
-% Notes:
-%   This wrapper duplicates the same foil into both the root and tip slots
-%   and returns the "root" result.
 
     arguments
         foilName
@@ -32,7 +28,12 @@ function foilOut = runSingleAirfoilXFOIL(foilName, Re, alpha_deg, opts)
     end
 
     if ~isfield(opts, 'xfoilFolder') || isempty(opts.xfoilFolder)
-        opts.xfoilFolder = '.';
+        error('runSingleAirfoilXFOIL:MissingXFOILFolder', ...
+            'opts.xfoilFolder must be provided.');
+    end
+    if ~isfield(opts, 'airfoilFolder') || isempty(opts.airfoilFolder)
+        error('runSingleAirfoilXFOIL:MissingAirfoilFolder', ...
+            'opts.airfoilFolder must be provided.');
     end
     if ~isfield(opts, 'Mach') || isempty(opts.Mach)
         opts.Mach = 0.0;
@@ -46,13 +47,8 @@ function foilOut = runSingleAirfoilXFOIL(foilName, Re, alpha_deg, opts)
     if ~isfield(opts, 'printSummary') || isempty(opts.printSummary)
         opts.printSummary = false;
     end
-    if ~isfield(opts, 'airfoilFolder') || isempty(opts.airfoilFolder)
-        opts.airfoilFolder = '.';
-    end
 
     foilName = char(string(foilName));
-
-    % If this is a coordinate file, make sure XFOIL can see it from the cwd.
     isNACA = startsWith(upper(strtrim(foilName)), 'NACA');
 
     copiedLocal = false;
@@ -60,14 +56,14 @@ function foilOut = runSingleAirfoilXFOIL(foilName, Re, alpha_deg, opts)
     dstFile = fullfile(pwd, foilName);
 
     if ~isNACA
-        if exist(foilName, 'file') ~= 2
-            if exist(srcFile, 'file') == 2
-                copyfile(srcFile, dstFile);
-                copiedLocal = true;
-            else
-                error('runSingleAirfoilXFOIL:FileNotFound', ...
-                    'Could not find airfoil file "%s" in cwd or airfoilFolder.', foilName);
-            end
+        if exist(srcFile, 'file') ~= 2
+            error('runSingleAirfoilXFOIL:FileNotFound', ...
+                'Could not find airfoil file:\n%s', srcFile);
+        end
+
+        if exist(dstFile, 'file') ~= 2
+            copyfile(srcFile, dstFile);
+            copiedLocal = true;
         end
     end
 

@@ -29,8 +29,8 @@
 %               plotAircraftGeometry3D(...)
 % Version 13.0: Organizes user input into blocks USER Input, and 
 %               CAD Design Variables
-
-%Test
+% Version 14.0: replaces runtime XFOIL calls with prebuilt Reynolds-based
+%               airfoil surrogate database generated offline from XFOIL
 clc; clearvars; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
@@ -424,76 +424,64 @@ fprintf('MAC LE x-location xLE_MAC   = %.4f m\n', xLE_MAC);
 fprintf('MAC c/4 x-location          = %.4f m\n', x_c4_MAC);
 fprintf('Tip LE x-location xLE_tip   = %.4f m\n', xLE_tip);
 
-%% ============== Airfoil Selection & Analysis(xfoil) ===============
+%% ============== Airfoil Selection & Analysis (Surrogate) ===============
+fprintf('================ Airfoil Analysis (Surrogate) ================\n');
 
-airfoilIn = struct();
+% -------- User-selected root and tip airfoils --------
+airfoilRootName = 'e222.dat';
+airfoilTipName  = 'e230.dat';
 
-% –––– User-selected airfoils ––––
-airfoilIn.rootFoil = 'e222.dat';
-airfoilIn.tipFoil  = 'e230.dat';
+% -------- Flow properties --------
+rho = roh;               % [kg/m^3]
+mu  = 1.789e-5;          % [kg/(m*s)]
+Vref_mps = mission.V_pattern;   % [m/s]
 
-copyfile(fullfile(repoRoot, 'data', 'airfoils', airfoilIn.rootFoil),...
-fullfile(repoRoot, airfoilIn.rootFoil));
+% -------- Reynolds numbers from current geometry --------
+Re_root = rho * Vref_mps * c_root / mu;   % [-]
+Re_tip  = rho * Vref_mps * c_tip  / mu;   % [-]
 
-copyfile(fullfile(repoRoot, 'data', 'airfoils', airfoilIn.tipFoil),...
-fullfile(repoRoot, airfoilIn.tipFoil));
+fprintf('Reference speed           = %.3f m/s\n', Vref_mps);
+fprintf('Root chord                = %.5f m\n', c_root);
+fprintf('Tip chord                 = %.5f m\n', c_tip);
+fprintf('Root Reynolds number      = %.3e\n', Re_root);
+fprintf('Tip Reynolds number       = %.3e\n', Re_tip);
 
-% -------- XFOIL executable location --------
-% Leave as '.' if xfoilWindows / xfoilMAC are in the current folder.
-% Otherwise set this to the folder containing those executables.
-airfoilIn.xfoilFolder = fullfile(repoRoot, 'external', 'xfoil', 'bin');
+% -------- Load surrogate database once --------
+persistent airfoilDB_cached
+if isempty(airfoilDB_cached)
+    airfoilDB_cached = loadAirfoilSurrogateDB(repoRoot);
+end
 
-% -------- Flight condition --------
-airfoilIn.V_ref_mps = mission.V_pattern;   % use existing mission speed
-airfoilIn.rho       = roh;               % [kg/m^3]
-airfoilIn.mu        = 1.789e-5;            % [kg/(m*s)] NEEDS TO BE CHECKED
-airfoilIn.Mach      = 0.03;                % [-] NEEDS TO BE CHECKED
+% -------- Evaluate root and tip airfoils --------
+rootAirfoil = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilRootName, Re_root);
+tipAirfoil  = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilTipName,  Re_tip);
 
-% -------- Reynolds numbers from current wing geometry --------
-airfoilIn.Re_root = airfoilIn.rho * airfoilIn.V_ref_mps * c_root / airfoilIn.mu;
-airfoilIn.Re_tip  = airfoilIn.rho * airfoilIn.V_ref_mps * c_tip  / airfoilIn.mu;
+% -------- Package to match old workflow --------
+airfoilOut = struct();
+airfoilOut.root = rootAirfoil;
+airfoilOut.tip  = tipAirfoil;
+airfoilOut.xfoilExe = 'SURROGATE_DB';
+airfoilOut.aeroTwist_deg = airfoilOut.root.alphaL0_deg - airfoilOut.tip.alphaL0_deg;
 
-% -------- XFOIL settings --------
-airfoilIn.alpha_deg = -6:0.5:12;   % analysis sweep
-airfoilIn.Ncrit     = 9;           % e^n transition parameter
-airfoilIn.xtr_top   = 1.0;         % forced transition location, top
-airfoilIn.xtr_bot   = 1.0;         % forced transition location, bottom
-airfoilIn.maxIter   = 150;         % viscous solver iterations
-
-% -------- Optional behavior --------
-airfoilIn.cleanupFiles = true;     % delete temp files after run
-airfoilIn.printSummary = true;     % print key values to command window
-
-% Run XFOIL-based section analysis for the selected root and tip airfoils
-airfoilOut = airfoilAnalysisXFOIL(airfoilIn);
-
-delete(fullfile(repoRoot, airfoilIn.rootFoil));
-delete(fullfile(repoRoot, airfoilIn.tipFoil));
-
-% Useful outputs
-rootPolar = airfoilOut.root;
-tipPolar  = airfoilOut.tip;
-
-fprintf('\n================ Airfoil Analysis =================\n');
 fprintf('Root airfoil              = %s\n', airfoilOut.root.name);
 fprintf('Tip airfoil               = %s\n', airfoilOut.tip.name);
-fprintf('Root Reynolds number      = %.3e\n', airfoilOut.root.Re);
-fprintf('Tip Reynolds number       = %.3e\n', airfoilOut.tip.Re);
-fprintf('Root Cla                  = %.4f per deg\n', airfoilOut.root.Cla_per_deg);
-fprintf('Tip Cla                   = %.4f per deg\n', airfoilOut.tip.Cla_per_deg);
-fprintf('Root alphaL0              = %.3f deg\n', airfoilOut.root.alphaL0_deg);
-fprintf('Tip alphaL0               = %.3f deg\n', airfoilOut.tip.alphaL0_deg);
-fprintf('Aerodynamic twist         = %.3f deg\n', airfoilOut.aeroTwist_deg);
-fprintf('Root Cm0                  = %.4f\n', airfoilOut.root.Cm0);
-fprintf('Tip Cm0                   = %.4f\n', airfoilOut.tip.Cm0);
-fprintf('Root Cl_max               = %.4f\n', airfoilOut.root.Cl_max);
-fprintf('Tip Cl_max                = %.4f\n', airfoilOut.tip.Cl_max);
-fprintf('Root best L/D             = %.4f\n', airfoilOut.root.bestLD);
-fprintf('Tip best L/D              = %.4f\n', airfoilOut.tip.bestLD);
-fprintf('===================================================\n\n');
 
-% Detailed aero plots
-plotAirfoilResults(airfoilOut);
+fprintf('\n---- Root airfoil metrics ----\n');
+fprintf('Cla                       = %.5f per deg\n', airfoilOut.root.Cla_per_deg);
+fprintf('alphaL0                   = %.5f deg\n', airfoilOut.root.alphaL0_deg);
+fprintf('Cm0                       = %.5f\n', airfoilOut.root.Cm0);
+fprintf('Cl_max                    = %.5f\n', airfoilOut.root.Cl_max);
+fprintf('Best L/D                  = %.5f\n', airfoilOut.root.bestLD);
+
+fprintf('\n---- Tip airfoil metrics ----\n');
+fprintf('Cla                       = %.5f per deg\n', airfoilOut.tip.Cla_per_deg);
+fprintf('alphaL0                   = %.5f deg\n', airfoilOut.tip.alphaL0_deg);
+fprintf('Cm0                       = %.5f\n', airfoilOut.tip.Cm0);
+fprintf('Cl_max                    = %.5f\n', airfoilOut.tip.Cl_max);
+fprintf('Best L/D                  = %.5f\n', airfoilOut.tip.bestLD);
+
+fprintf('\nAerodynamic twist         = %.5f deg\n', airfoilOut.aeroTwist_deg);
+fprintf('===============================================================\n\n');
 %% ================= Twist Function (Panknin) ===============
 
 twistIn = struct();
