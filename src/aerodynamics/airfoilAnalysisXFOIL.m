@@ -192,14 +192,7 @@ function out = localRunOneAirfoil(foilName, Re, Mach, alphaVec, maxIter, xfoilEx
             fprintf(fid, 'NACA %s\n', nacaDigits);
         else
             fprintf(fid, 'LOAD %s\n', foilNameTrim);
-            % Fix poor coordinate distribution for dat files
-            fprintf(fid, 'GDES\n');
-            fprintf(fid, 'CADD\n');
-            fprintf(fid, '\n');    % accept defaults
-            fprintf(fid, '\n');
-            fprintf(fid, '\n');
-            fprintf(fid, '\n');
-            fprintf(fid, '\n');    % exit GDES
+           
         end
 
         % -------- Panel / operating menu --------
