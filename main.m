@@ -446,16 +446,12 @@ fprintf('Tip chord                 = %.5f m\n', c_tip);
 fprintf('Root Reynolds number      = %.3e\n', Re_root);
 fprintf('Tip Reynolds number       = %.3e\n', Re_tip);
 
-% -------- Load surrogate database once --------
-persistent airfoilDB_cached
-if isempty(airfoilDB_cached)
-    airfoilDB_cached = loadAirfoilSurrogateDB(repoRoot);
-end
+% -------- Load surrogate database --------
+airfoilDB_cached = loadAirfoilSurrogateDB(repoRoot);
 
 % -------- Evaluate root and tip airfoils --------
 rootAirfoil = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilRootName, Re_root);
 tipAirfoil  = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilTipName,  Re_tip);
-
 % -------- Package to match old workflow --------
 airfoilOut = struct();
 airfoilOut.root = rootAirfoil;
@@ -651,8 +647,8 @@ fprintf('==========================================================\n\n');
 spanIn = struct();
 
 % -------- Reference flight condition --------
-spanIn.rho        = airfoilIn.rho;
-spanIn.V_ref_mps  = airfoilIn.V_ref_mps;
+spanIn.rho        = rho;
+spanIn.V_ref_mps  = Vref_mps;
 spanIn.alpha_ref_deg = 4.0;     % first-pass aircraft reference AoA
 
 % -------- Wing geometry --------
