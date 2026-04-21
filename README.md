@@ -1,4 +1,4 @@
-MAE 155B Aircraft Design Project
+**MAE 155B Aircraft Design Project**
 
 Overview
 
@@ -10,32 +10,31 @@ GitHub is the source of truth for the code. Do not use MATLAB Drive for editing 
 
 ⸻
 
-First-Time Setup on Windows
-
-1. Get access to the repository
+**First-Time Setup on Windows**
+**1. Get access to the repository**
 
 Before doing anything else, make sure you have been added as a collaborator on GitHub.
 
 ⸻
 
-2. Install Git for Windows
+**2. Install Git for Windows**
 
 Install Git for Windows from the official Git website.
 
 After installing, open PowerShell and verify Git is installed:
 
-git –version
+	git --version
 
 If Git is installed correctly, PowerShell will print a version number.
 
 ⸻
 
-3. Create an SSH key
+**3. Create an SSH key**
 
-In PowerShell, run:
+**In PowerShell, run:**
 
-mkdir $HOME.ssh
-ssh-keygen -t ed25519 -C “your_email@example.com”
+	mkdir $HOME.ssh
+	ssh-keygen -t ed25519 -C “your_email@example.com”
 
 Press Enter for all prompts.
 
@@ -43,11 +42,11 @@ This creates your SSH key.
 
 ⸻
 
-4. Add your SSH key to GitHub
+**4. Add your SSH key to GitHub**
 
 In PowerShell, run:
 
-type $HOME.ssh\id_ed25519.pub
+	type $HOME.ssh\id_ed25519.pub
 
 Copy the full output.
 
@@ -59,11 +58,11 @@ Paste the copied key and save it.
 
 ⸻
 
-5. Test your SSH connection
+**5. Test your SSH connection**
 
 In PowerShell, run:
 
-ssh -T git@github.com
+	ssh -T git@github.com
 
 If prompted, type:
 
@@ -75,13 +74,13 @@ Hi YOUR_USERNAME!
 
 ⸻
 
-6. Clone the repository
+**6. Clone the repository**
 
 In PowerShell, run:
 
-cd $HOME\Desktop
-git clone git@github.com:Darlock7/MAE155B-Aircraft-Design.git
-cd MAE155B-Aircraft-Design
+	cd $HOME\Desktop
+	git clone git@github.com:Darlock7/MAE155B-Aircraft-Design.git
+	cd MAE155B-Aircraft-Design
 
 This will create a local copy of the repository on your Desktop.
 
@@ -89,7 +88,7 @@ This will create a local copy of the repository on your Desktop.
 
 Running the Project
 
-1. Open MATLAB
+**1. Open MATLAB**
 
 Open MATLAB and set the Current Folder to:
 
@@ -97,60 +96,58 @@ C:\Users\YourUserName\Desktop\MAE155B-Aircraft-Design
 
 Or, from PowerShell, you can open the folder first and then open MATLAB manually:
 
-cd $HOME\Desktop\MAE155B-Aircraft-Design
+	cd $HOME\Desktop\MAE155B-Aircraft-Design
 
 ⸻
 
-2. Run the project
+**2. Run the project**
 
 In MATLAB, run:
 
-run_project
-main
+	run_project
+	main
 
 Always run run_project before main.
 
 ⸻
 
-Daily Workflow
+**Daily Workflow**
 
-Before starting work
+**Before starting work**
 
-Open PowerShell and run:
+**Open PowerShell and run:**
 
-cd $HOME\Desktop\MAE155B-Aircraft-Design
-git pull
+	cd $HOME\Desktop\MAE155B-Aircraft-Design
+	git pull
 
-Then open MATLAB and run:
+**Then open MATLAB and run:**
 
 run_project
 main
 
 ⸻
 
-After making changes
+**After making changes**
 
 Save your work in MATLAB.
 
 Then in PowerShell, run:
 
-cd $HOME\Desktop\MAE155B-Aircraft-Design
-git add .
-git commit -m “describe your changes”
-git push
+	cd $HOME\Desktop\MAE155B-Aircraft-Design
+	git add .
+	git commit -m “describe your changes”
+	git push
 
 Use a short, clear commit message.
 
-Examples:
+**Examples:**
 
 git commit -m “Updated propulsion analysis”
 git commit -m “Fixed airfoil path issue”
 git commit -m “Improved mission profile calculations”
 
 ⸻
-
-Project Structure
-
+**Project Structure**
 main.m
 Main entry point for the project
 
@@ -198,7 +195,7 @@ Older versions of main scripts kept for reference
 
 ⸻
 
-Important Rules
+**Important Rules**
 
 Always run:
 
@@ -229,7 +226,7 @@ Do not edit directly on GitHub unless absolutely necessary.
 
 ⸻
 
-Common PowerShell Commands
+**Common PowerShell Commands**
 
 Go to the repo folder:
 
@@ -264,8 +261,7 @@ Test GitHub SSH connection:
 ssh -T git@github.com
 
 ⸻
-
-Common Problems
+**Common Problems**
 
 Git is not recognized
 
