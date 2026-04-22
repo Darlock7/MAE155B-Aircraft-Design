@@ -1023,6 +1023,44 @@ geom3DIn.components = comp;
 plotAircraftGeometry3D(geom3DIn);
 %% =========== V-n Diagram ===================
 
+vnIn = struct();
+
+% atmosphere / aircraft
+vnIn.rho       = roh;      % [kg/m^3]
+vnIn.W_N       = Wg;       % [N]
+vnIn.S_ref_m2  = S_ref;    % [m^2]
+
+% maneuver / aero assumptions
+vnIn.CLmax_pos   = CLmax;          % [-]
+vnIn.CLmax_neg   = -0.8 * CLmax;   % [-] first-pass assumption
+vnIn.n_pos_limit = 3.8;            % [-]
+vnIn.n_neg_limit = -1.5;           % [-]
+
+% speeds
+vnIn.Vc_mps = mission.V_pattern;   % [m/s]
+vnIn.Vd_mps = 1.25 * vnIn.Vc_mps;  % [m/s] first-pass assumption
+
+% plotting options
+vnIn.plotUnits  = 'mph';
+vnIn.Npts       = 500;
+vnIn.makeFigure = true;
+
+% run function
+vnOut = plotVNDiagram(vnIn);
+
+fprintf('\n================ V-n Diagram =================\n');
+fprintf('Positive CLmax              = %.4f\n', vnOut.CLmax_pos);
+fprintf('Negative CLmax              = %.4f\n', vnOut.CLmax_neg);
+fprintf('Positive stall speed Vs+    = %.3f m/s\n', vnOut.Vs_pos_mps);
+fprintf('Negative stall speed Vs-    = %.3f m/s\n', vnOut.Vs_neg_mps);
+fprintf('Maneuver speed Va           = %.3f m/s\n', vnOut.Va_mps);
+fprintf('Negative corner speed       = %.3f m/s\n', vnOut.Vneg_mps);
+fprintf('Cruise speed Vc             = %.3f m/s\n', vnOut.Vc_mps);
+fprintf('Dive speed Vd               = %.3f m/s\n', vnOut.Vd_mps);
+fprintf('Positive limit load factor  = %.3f\n', vnOut.n_pos_limit);
+fprintf('Negative limit load factor  = %.3f\n', vnOut.n_neg_limit);
+fprintf('================================================\n\n');
+
 %% =============== Dynamic Stability Analysis (AVL) ==============
 
 %% ============== Advanced Aerodynamics (CFD) ============
