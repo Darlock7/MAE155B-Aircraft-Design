@@ -98,6 +98,36 @@ AR          = 8.5;           % [-] first-pass flying-wing assumption
 wingTapper  = 0.85;        % [-]
 wingSweep   = 30;          % [deg] quarter-chord sweep
 
+%% ============== Drag Build-Up User Inputs ==============
+% These are user-entered first-pass values and should be updated from CAD.
+
+useDragBuildUp = true;     % true = compute CD0 from geometry, false = use CD0 below
+
+% ---- fallback parasite drag if not using build-up ----
+CD0_user = CD0;            % [-]
+
+% ---- wetted areas ----
+Swet_wing = 0.50844919;        % [m^2] total wing wetted area
+Swet_fuse = 0.20135732;        % [m^2] centerbody / fuselage wetted area
+Swet_fin  = 0.10995794;        % [m^2] total wetted area of both fins
+
+% ---- body dimensions for centerbody / fuselage drag model ----
+Lf = 0.55666667;               % [m] body length
+Wf = 0.16635000;               % [m] max body width
+Hf = 0.10145110;               % [m] max body height
+
+% ---- wing / fin form-factor settings ----
+tc = 0.12;                 % [-] representative thickness-to-chord ratio
+xc = 0.30;                 % [-] x/c location of max thickness
+
+% ---- interference factors ----
+Q_wing = 1.10;             % [-]
+Q_fuse = 1.10;             % [-]
+Q_fin  = 1.10;             % [-]
+
+% ---- plot settings ----
+alphaPolar_deg = -12:0.25:16;   % [deg]
+
 %% ============== Effective Aircraft Penalties ===========
 % Penalties applied relative to Vp_ref
 if VPS <= 1
@@ -784,10 +814,82 @@ fprintf('=========================================================\n\n');
 plotSpanwiseAeroEstimate(spanOut);
 
 
-%% ================ Drag build up ==================
+%% ================ Drag Build-Up + Aircraft Polar ==================
+fprintf('\n================ Drag Build-Up + Aircraft Polar =================\n');
 
-%% =============== CL, CD, plots ==================
+aeroIn = struct();
 
+% -------- Atmosphere / flight condition --------
+aeroIn.rho_kgm3      = roh;          % [kg/m^3]
+aeroIn.mu_Pas        = 1.789e-5;     % [Pa*s]
+aeroIn.V_cruise_mps  = V_cruise;     % [m/s]
+aeroIn.W_N           = Wg;           % [N]
+
+% -------- Aircraft geometry --------
+aeroIn.Sref_m2       = S_ref;        % [m^2]
+aeroIn.AR            = AR;           % [-]
+aeroIn.e             = e;            % [-]
+aeroIn.MAC_m         = MAC;          % [m]
+aeroIn.sweepC4_deg   = wingSweep;    % [deg]
+
+% -------- Lift-curve inputs from surrogate airfoils --------
+aeroIn.Cla_root_per_deg = airfoilOut.root.Cla_per_deg;      % [1/deg]
+aeroIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;       % [1/deg]
+
+aeroIn.alphaL0_root_deg = airfoilOut.root.alphaL0_deg;      % [deg]
+aeroIn.alphaL0_tip_deg  = airfoilOut.tip.alphaL0_deg;       % [deg]
+
+aeroIn.Clmax_root = airfoilOut.root.Cl_max;                 % [-]
+aeroIn.Clmax_tip  = airfoilOut.tip.Cl_max;                  % [-]
+
+% -------- Drag build-up inputs --------
+aeroIn.useDragBuildUp = useDragBuildUp;
+aeroIn.CD0_user       = CD0_user;
+
+aeroIn.Swet_wing_m2 = Swet_wing;
+aeroIn.Swet_fuse_m2 = Swet_fuse;
+aeroIn.Swet_fin_m2  = Swet_fin;
+
+aeroIn.Lf_m = Lf;
+aeroIn.Wf_m = Wf;
+aeroIn.Hf_m = Hf;
+
+aeroIn.tc = tc;
+aeroIn.xc = xc;
+
+aeroIn.Q_wing = Q_wing;
+aeroIn.Q_fuse = Q_fuse;
+aeroIn.Q_fin  = Q_fin;
+
+% -------- Plot settings --------
+aeroIn.alpha_vec_deg = alphaPolar_deg;
+aeroIn.plotFigures   = true;
+
+% -------- Run aircraft aero polar --------
+aeroOut = aeroPolarAircraft(aeroIn);
+
+% -------- Feed back useful outputs into main --------
+CD0   = aeroOut.CD0;         % update main CD0 with drag build-up result
+CLmax = aeroOut.CLmax_3D;    % update main CLmax with first-pass 3D estimate
+
+fprintf('Reynolds number              = %.4e\n', aeroOut.Re);
+fprintf('Skin-friction coeff Cf       = %.6f\n', aeroOut.Cf);
+fprintf('CD0_wing                     = %.5f\n', aeroOut.CD0_wing);
+fprintf('CD0_fuse                     = %.5f\n', aeroOut.CD0_fuse);
+fprintf('CD0_fin                      = %.5f\n', aeroOut.CD0_fin);
+fprintf('Total CD0                    = %.5f\n', aeroOut.CD0);
+fprintf('CLalpha_2D_avg               = %.5f per deg\n', aeroOut.CLalpha_2D_avg_perDeg);
+fprintf('CLalpha_3D                   = %.5f per deg\n', aeroOut.CLalpha_3D_perDeg);
+fprintf('alphaL0_avg                  = %.5f deg\n', aeroOut.alphaL0_avg_deg);
+fprintf('CLmax_2D_avg                 = %.5f\n', aeroOut.CLmax_2D_avg);
+fprintf('CLmax_3D                     = %.5f\n', aeroOut.CLmax_3D);
+fprintf('alpha_stall estimate         = %.5f deg\n', aeroOut.alpha_stall_deg);
+fprintf('CL_cruise                    = %.5f\n', aeroOut.CL_cruise);
+fprintf('alpha_cruise                 = %.5f deg\n', aeroOut.alpha_cruise_deg);
+fprintf('CD_cruise                    = %.5f\n', aeroOut.CD_cruise);
+fprintf('L/D_cruise                   = %.5f\n', aeroOut.LD_cruise);
+fprintf('(L/D)_max                    = %.5f\n', aeroOut.LD_max);
+fprintf('=================================================================\n\n');
 %% ============== Aircraft Mass Properties ==================
 fprintf('\n================ Aircraft Mass Properties =================\n');
 
@@ -822,8 +924,8 @@ comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.16,  0.000,  0.000]);
 
-% ---- Battery / avionics ----
-comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.25, 0.000, 0.000]);
+% ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
+comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.33, 0.000, 0.000]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.45, 0.000, 0.000]);
 
 % ---- Payload ----
