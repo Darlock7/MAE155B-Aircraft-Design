@@ -8,10 +8,9 @@ function plotAircraftGeometry3D(geom3DIn)
 %   - The vertical surface data in geom3DIn.vertOut must also already be
 %     in ABSOLUTE aircraft coordinates.
 %
-% Axis convention:
-%   x forward/aft per project convention
-%   y right
-%   z up
+% Optional features:
+%   - Loaded / unloaded CG markers
+%   - Point-mass component markers and labels
 
     arguments
         geom3DIn struct
@@ -33,9 +32,11 @@ function plotAircraftGeometry3D(geom3DIn)
     end
 
     %% ---------------- Defaults ----------------
-    if ~isfield(geom3DIn,'plotVertical'); geom3DIn.plotVertical = false; end
-    if ~isfield(geom3DIn,'plotBody');     geom3DIn.plotBody     = false; end
-    if ~isfield(geom3DIn,'plotCG');       geom3DIn.plotCG       = false; end
+    if ~isfield(geom3DIn,'plotVertical');        geom3DIn.plotVertical = false; end
+    if ~isfield(geom3DIn,'plotBody');            geom3DIn.plotBody = false; end
+    if ~isfield(geom3DIn,'plotCG');              geom3DIn.plotCG = false; end
+    if ~isfield(geom3DIn,'plotComponents');      geom3DIn.plotComponents = false; end
+    if ~isfield(geom3DIn,'plotComponentLabels'); geom3DIn.plotComponentLabels = false; end
 
     if ~isfield(geom3DIn,'z_MAC_m')
         geom3DIn.z_MAC_m = geom3DIn.z_root_m;
@@ -64,16 +65,16 @@ function plotAircraftGeometry3D(geom3DIn)
     xlabel('x [m]');
     ylabel('y [m]');
     zlabel('z [m]');
-    title('3D Aircraft Geometry');
+    title('3D Aircraft Geometry with Loaded / Unloaded CG');
 
     %% ---------------- Wing planform outlines ----------------
-    % Right wing (absolute coordinates)
+    % Right wing
     P1 = [xLE_root,          y_root, z_root];
     P2 = [xLE_root + c_root, y_root, z_root];
     P3 = [xLE_tip  + c_tip,  y_tip,  z_tip];
     P4 = [xLE_tip,           y_tip,  z_tip];
 
-    % Left wing mirrored about y = 0
+    % Left wing mirror
     P1L = [xLE_root,          -y_root, z_root];
     P2L = [xLE_root + c_root, -y_root, z_root];
     P3L = [xLE_tip  + c_tip,  -y_tip,  z_tip];
@@ -104,7 +105,7 @@ function plotAircraftGeometry3D(geom3DIn)
 
     %% ---------------- Body / package ----------------
     if geom3DIn.plotBody
-        reqBody = {'bodyLength_m','bodyWidth_m','bodyHeight_m','xCG_m','yCG_m','zCG_m'};
+        reqBody = {'bodyLength_m','bodyWidth_m','bodyHeight_m','xBody_m','yBody_m','zBody_m'};
         for k = 1:numel(reqBody)
             if ~isfield(geom3DIn, reqBody{k})
                 error('plotAircraftGeometry3D:MissingBodyField', ...
@@ -116,13 +117,13 @@ function plotAircraftGeometry3D(geom3DIn)
         W = geom3DIn.bodyWidth_m;
         H = geom3DIn.bodyHeight_m;
 
-        x_cg = geom3DIn.xCG_m;
-        y_cg = geom3DIn.yCG_m;
-        z_cg = geom3DIn.zCG_m;
+        x_c = geom3DIn.xBody_m;
+        y_c = geom3DIn.yBody_m;
+        z_c = geom3DIn.zBody_m;
 
-        x0 = x_cg - L/2;
-        y0 = y_cg - W/2;
-        z0 = z_cg - H/2;
+        x0 = x_c - L/2;
+        y0 = y_c - W/2;
+        z0 = z_c - H/2;
 
         X = [0 1 1 0 0 1 1 0]*L + x0;
         Y = [0 0 1 1 0 0 1 1]*W + y0;
@@ -133,22 +134,8 @@ function plotAircraftGeometry3D(geom3DIn)
         patch('Vertices',[X' Y' Z'], ...
               'Faces',faces, ...
               'FaceColor',[0.3 0.3 0.8], ...
-              'FaceAlpha',0.4, ...
+              'FaceAlpha',0.15, ...
               'EdgeColor','none');
-    end
-
-    %% ---------------- CG marker ----------------
-    if geom3DIn.plotCG
-        reqCG = {'xCG_m','yCG_m','zCG_m'};
-        for k = 1:numel(reqCG)
-            if ~isfield(geom3DIn, reqCG{k})
-                error('plotAircraftGeometry3D:MissingCGField', ...
-                    'Missing required CG field: %s', reqCG{k});
-            end
-        end
-
-        plot3(geom3DIn.xCG_m, geom3DIn.yCG_m, geom3DIn.zCG_m, ...
-            'ro','MarkerFaceColor','r','MarkerSize',7);
     end
 
     %% ---------------- Vertical surfaces ----------------
@@ -160,16 +147,58 @@ function plotAircraftGeometry3D(geom3DIn)
         drawVerticalSurfacePairAbsolute(geom3DIn.vertOut);
     end
 
-    %% ---------------- Cosmetics ----------------
-    legendEntries = {};
-    legendHandles = [];
+    %% ---------------- Component points ----------------
+    if geom3DIn.plotComponents
+        if ~isfield(geom3DIn,'components')
+            error('plotAircraftGeometry3D:MissingComponents', ...
+                'plotComponents=true but geom3DIn.components was not provided.');
+        end
 
-    % wing
+        comps = geom3DIn.components;
+        for i = 1:numel(comps)
+            r = comps(i).r_m;
+            plot3(r(1), r(2), r(3), 'ko', ...
+                'MarkerFaceColor', [0.2 0.2 0.2], ...
+                'MarkerSize', 5);
+
+            if geom3DIn.plotComponentLabels
+                text(r(1), r(2), r(3), ['  ' comps(i).name], ...
+                    'FontSize', 8, 'Interpreter','none');
+            end
+        end
+    end
+
+    %% ---------------- CG markers ----------------
+    if geom3DIn.plotCG
+
+        if isfield(geom3DIn,'xCG_loaded_m')
+            plot3(geom3DIn.xCG_loaded_m, geom3DIn.yCG_loaded_m, geom3DIn.zCG_loaded_m, ...
+                'ro','MarkerFaceColor','r','MarkerSize',8);
+            text(geom3DIn.xCG_loaded_m, geom3DIn.yCG_loaded_m, geom3DIn.zCG_loaded_m, ...
+                '  CG loaded','Color','r','FontSize',9);
+        elseif isfield(geom3DIn,'xCG_m')
+            plot3(geom3DIn.xCG_m, geom3DIn.yCG_m, geom3DIn.zCG_m, ...
+                'ro','MarkerFaceColor','r','MarkerSize',8);
+            text(geom3DIn.xCG_m, geom3DIn.yCG_m, geom3DIn.zCG_m, ...
+                '  CG','Color','r','FontSize',9);
+        end
+
+        if isfield(geom3DIn,'xCG_unloaded_m')
+            plot3(geom3DIn.xCG_unloaded_m, geom3DIn.yCG_unloaded_m, geom3DIn.zCG_unloaded_m, ...
+                'ms','MarkerFaceColor','m','MarkerSize',8);
+            text(geom3DIn.xCG_unloaded_m, geom3DIn.yCG_unloaded_m, geom3DIn.zCG_unloaded_m, ...
+                '  CG unloaded','Color','m','FontSize',9);
+        end
+    end
+
+    %% ---------------- Legend proxies ----------------
+    legendHandles = [];
+    legendEntries = {};
+
     hWing = plot3(nan,nan,nan,'k','LineWidth',1.8);
     legendHandles(end+1) = hWing; %#ok<AGROW>
     legendEntries{end+1} = 'Wing planform'; %#ok<AGROW>
 
-    % MAC
     hMAC = plot3(nan,nan,nan,'r','LineWidth',3);
     legendHandles(end+1) = hMAC; %#ok<AGROW>
     legendEntries{end+1} = 'MAC'; %#ok<AGROW>
@@ -180,10 +209,23 @@ function plotAircraftGeometry3D(geom3DIn)
         legendEntries{end+1} = 'Vertical surface'; %#ok<AGROW>
     end
 
+    if geom3DIn.plotComponents
+        hComp = plot3(nan,nan,nan,'ko','MarkerFaceColor',[0.2 0.2 0.2],'MarkerSize',5);
+        legendHandles(end+1) = hComp; %#ok<AGROW>
+        legendEntries{end+1} = 'Components'; %#ok<AGROW>
+    end
+
     if geom3DIn.plotCG
-        hCG = plot3(nan,nan,nan,'ro','MarkerFaceColor','r','MarkerSize',7);
-        legendHandles(end+1) = hCG; %#ok<AGROW>
-        legendEntries{end+1} = 'CG'; %#ok<AGROW>
+        if isfield(geom3DIn,'xCG_loaded_m')
+            hLoaded = plot3(nan,nan,nan,'ro','MarkerFaceColor','r','MarkerSize',8);
+            legendHandles(end+1) = hLoaded; %#ok<AGROW>
+            legendEntries{end+1} = 'CG loaded'; %#ok<AGROW>
+        end
+        if isfield(geom3DIn,'xCG_unloaded_m')
+            hUnloaded = plot3(nan,nan,nan,'ms','MarkerFaceColor','m','MarkerSize',8);
+            legendHandles(end+1) = hUnloaded; %#ok<AGROW>
+            legendEntries{end+1} = 'CG unloaded'; %#ok<AGROW>
+        end
     end
 
     legend(legendHandles, legendEntries, 'Location','best');
@@ -194,17 +236,12 @@ end
 
 function plotTwistedChord(LE, chord, twist_deg, style)
     theta = deg2rad(twist_deg);
-
-    % Chord line projected in x-z plane
     x1 = LE(1) + chord*cos(theta);
     z1 = LE(3) - chord*sin(theta);
-
-    plot3([LE(1) x1], [LE(2) LE(2)], [LE(3) z1], ...
-        style, 'LineWidth', 2);
+    plot3([LE(1) x1], [LE(2) LE(2)], [LE(3) z1], style, 'LineWidth', 2);
 end
 
 function drawVerticalSurfacePairAbsolute(vertOut)
-% Draw right vertical surface from absolute coordinates, then mirror to left.
 
     req = { ...
         'xLE_root_v_m','y_root_v_m','z_root_v_m', ...
@@ -234,26 +271,22 @@ function drawVerticalSurfacePairAbsolute(vertOut)
     cr = vertOut.c_root_v_m;
     ct = vertOut.c_tip_v_m;
 
-    % -------- Right side --------
+    % Right
     R_LE = [xr,     yr, zr];
     R_TE = [xr+cr,  yr, zr];
-
     T_LE = [xt,     yt, zt];
     T_TE = [xt+ct,  yt, zt];
-
     B_LE = [xb,     yb, zb];
     B_TE = [xb+ct,  yb, zb];
 
     plotPanel(R_LE, R_TE, T_TE, T_LE);
     plotPanel(B_LE, B_TE, R_TE, R_LE);
 
-    % -------- Left side mirror --------
+    % Left
     R_LE_L = [xr,    -yr, zr];
     R_TE_L = [xr+cr, -yr, zr];
-
     T_LE_L = [xt,    -yt, zt];
     T_TE_L = [xt+ct, -yt, zt];
-
     B_LE_L = [xb,    -yb, zb];
     B_TE_L = [xb+ct, -yb, zb];
 

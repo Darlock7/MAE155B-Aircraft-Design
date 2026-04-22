@@ -384,7 +384,7 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.085; % Imported from OnShape 4/20/2026
+wingIn.xLE_root_m = 0.0822; % Imported from OnShape 4/21/2026
 wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
@@ -729,7 +729,7 @@ spanIn = struct();
 % -------- Reference flight condition --------
 spanIn.rho        = rho;
 spanIn.V_ref_mps  = Vref_mps;
-spanIn.alpha_ref_deg = 4.0;     % first-pass aircraft reference AoA
+spanIn.alpha_ref_deg = 6.5;     % first-pass aircraft reference AoA
 
 % -------- Wing geometry --------
 spanIn.b_half_m   = b_half;
@@ -781,10 +781,194 @@ fprintf('=========================================================\n\n');
 
 plotSpanwiseAeroEstimate(spanOut);
 
-%% =============== 3D Geometry Plot & Sanity Check =========
+
+%% ================ Drag build up ==================
+
+%% =============== CL, CD, plots ==================
+
+%% ============== Aircraft Mass Properties ==================
+fprintf('\n================ Aircraft Mass Properties =================\n');
+
+% -------------------------------------------------------------------------
+% Fuselage-only CAD mass properties
+% Replace these with your actual fuselage-only CAD values when ready.
+% These should EXCLUDE the wings if you want wing geometry changes to update
+% the total aircraft mass properties correctly.
+% -------------------------------------------------------------------------
+cadMass = struct();
+
+cadMass.fuselageOnly.name    = 'Fuselage CAD';
+cadMass.fuselageOnly.mass_kg = 0.605;                        % [kg] <-- replace
+cadMass.fuselageOnly.cg_m    = [.26991149, 0.0, .0208886];  % [m]  <-- replace
+
+cadMass.fuselageOnly.Icg_kgm2 =  [ ...
+     0.00227939,   0.0000163,  -0.00002039; ...
+      0.0000163, 0.01168893,  -0.00000233; ...
+     -0.00002039, -0.00000233, 0.0131732 ];                             % [kg*m^2] <-- replace
+
+% -------------------------------------------------------------------------
+% Discrete point masses
+% All coordinates are ABSOLUTE aircraft coordinates [m]
+% x positive aft, y positive right, z positive up
+% -------------------------------------------------------------------------
+comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
+
+% NOTE: makePointMass(name, mass_kg, [x, y, z])
+
+% ---- Main propulsion ----
+comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
+comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
+comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.16,  0.000,  0.000]);
+
+% ---- Battery / avionics ----
+comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.45, 0.000, 0.000]);
+comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.45, 0.000, 0.000]);
+
+% ---- Payload ----
+comp(end+1) = makePointMass('Payload', Wp/g, [x_c4_MAC, 0.000, 0.009]);
+
+% ---- Wing servos: geometry-aware placement ----
+eta_servo = 0.65;   % span fraction on semispan
+
+y_servo_abs = wingIn.y_root_m + eta_servo * wingOut.semiSpan_m;
+x_hinge_abs = wingOut.xLE_root_m + ...
+    (wingOut.xLE_tip_m - wingOut.xLE_root_m) * eta_servo + ...
+    0.75 * (wingOut.c_root_m + (wingOut.c_tip_m - wingOut.c_root_m) * eta_servo);
+
+z_servo_abs = wingIn.z_root_m;
+
+comp(end+1) = makePointMass('S2 Servo LHS wing', 0.009, [x_hinge_abs, -y_servo_abs, z_servo_abs]);
+comp(end+1) = makePointMass('S3 Servo RHS wing', 0.009, [x_hinge_abs,  y_servo_abs, z_servo_abs]);
+
+% ---- Center/back wing servo ----
+comp(end+1) = makePointMass('S1 Servo back wing', 0.009, [x_c4_MAC + 0.020, 0.000, wingIn.z_root_m]);
+
+% ---- Vertical stabilizer servo ----
+comp(end+1) = makePointMass('S4 Servo vertical stabilizer', 0.009, ...
+    [vertOut.xLE_root_v_m + 0.70*vertOut.c_root_v_m, ...
+     vertOut.y_root_v_m, ...
+     vertOut.z_root_v_m + 0.20*vertOut.b_v_m]);
+
+% ---- Cargo bay servo ----
+comp(end+1) = makePointMass('S5 Servo cargo bay', 0.009, [0.13, 0.000, 0.000]);
+
+% -------------------------------------------------------------------------
+% Wing / vertical structure lumped masses
+% First-pass placeholders. Replace with better models or CAD subtraction later.
+% -------------------------------------------------------------------------
+
+% First-pass wing structure estimate
+m_wing_struct_kg = 0.392;   % [kg] <-- replace later with model/CAD-informed value
+
+% Place wing structural mass near quarter-chord MAC of each half wing
+x_wing_struct = x_c4_MAC;
+y_wing_struct = wingIn.y_root_m + 0.42 * wingOut.semiSpan_m;
+z_wing_struct = wingIn.z_root_m;
+
+comp(end+1) = makePointMass('Wing structure L', 0.5*m_wing_struct_kg, [x_wing_struct, -y_wing_struct, z_wing_struct]);
+comp(end+1) = makePointMass('Wing structure R', 0.5*m_wing_struct_kg, [x_wing_struct,  y_wing_struct, z_wing_struct]);
+
+% First-pass vertical structure estimate
+m_vert_struct_kg = 0.040;   % [kg] total both fins if twin-fin; tune later
+
+if vertOut.isTwin
+    m_fin_each = 0.5 * m_vert_struct_kg;
+else
+    m_fin_each = m_vert_struct_kg;
+end
+
+x_fin_struct = vertOut.xLE_root_v_m + 0.40*vertOut.c_root_v_m;
+y_fin_struct = vertOut.y_root_v_m;
+z_fin_struct = vertOut.z_root_v_m + 0.30*vertOut.b_v_m;
+
+comp(end+1) = makePointMass('Vertical structure R', m_fin_each, [x_fin_struct,  y_fin_struct, z_fin_struct]);
+
+if vertOut.isTwin
+    comp(end+1) = makePointMass('Vertical structure L', m_fin_each, [x_fin_struct, -y_fin_struct, z_fin_struct]);
+end
+
+% -------------------------------------------------------------------------
+% Mass properties input
+% -------------------------------------------------------------------------
+massIn = struct();
+massIn.cadBodies   = cadMass;
+massIn.pointMasses = comp;
+
+massOut = aircraftMassProperties(massIn);
+
+fprintf('Total aircraft mass           = %.4f kg\n', massOut.mass_kg);
+fprintf('Total aircraft weight         = %.4f N\n', massOut.weight_N);
+fprintf('Aircraft CG                   = [%.4f, %.4f, %.4f] m\n', ...
+    massOut.cg_m(1), massOut.cg_m(2), massOut.cg_m(3));
+
+fprintf('\nInertia tensor about aircraft CG [kg*m^2]:\n');
+disp(massOut.Icg_kgm2);
+
+fprintf('Ixx = %.6f kg*m^2\n', massOut.Icg_kgm2(1,1));
+fprintf('Iyy = %.6f kg*m^2\n', massOut.Icg_kgm2(2,2));
+fprintf('Izz = %.6f kg*m^2\n', massOut.Icg_kgm2(3,3));
+fprintf('Ixy = %.6f kg*m^2\n', massOut.Icg_kgm2(1,2));
+fprintf('Ixz = %.6f kg*m^2\n', massOut.Icg_kgm2(1,3));
+fprintf('Iyz = %.6f kg*m^2\n', massOut.Icg_kgm2(2,3));
+fprintf('=============================================================\n\n');
+
+%% ============== Unloaded Mass Case ==================
+% Remove payload only; payload location remains fixed by design
+
+payloadIdx = find(strcmp({comp.name}, 'Payload'), 1);
+
+if isempty(payloadIdx)
+    error('Could not find Payload component in comp array.');
+end
+
+comp_unloaded = comp;
+comp_unloaded(payloadIdx) = [];
+
+massIn_unloaded = struct();
+massIn_unloaded.cadBodies   = cadMass;
+massIn_unloaded.pointMasses = comp_unloaded;
+
+massOut_unloaded = aircraftMassProperties(massIn_unloaded);
+
+fprintf('---------------- Unloaded Mass Case ----------------\n');
+fprintf('Total unloaded mass          = %.4f kg\n', massOut_unloaded.mass_kg);
+fprintf('Total unloaded weight        = %.4f N\n', massOut_unloaded.weight_N);
+fprintf('Unloaded aircraft CG         = [%.4f, %.4f, %.4f] m\n', ...
+    massOut_unloaded.cg_m(1), massOut_unloaded.cg_m(2), massOut_unloaded.cg_m(3));
+fprintf('----------------------------------------------------\n\n');
+
+%% ============== CG as % MAC ===============
+fprintf('================ CG Location (% MAC) =================\n');
+
+x_cg   = massOut.cg_m(1);          % [m]
+xLEMAC = wingOut.xLE_MAC_m;        % [m]
+MAC    = wingOut.MAC_m;            % [m]
+
+cg_percent_MAC = (x_cg - xLEMAC) / MAC * 100;
+
+fprintf('x_cg           = %.4f m\n', x_cg);
+fprintf('x_LE_MAC       = %.4f m\n', xLEMAC);
+fprintf('MAC            = %.4f m\n', MAC);
+fprintf('CG location    = %.2f %% MAC\n', cg_percent_MAC);
+
+% Optional flagging
+if cg_percent_MAC < 0
+    fprintf('⚠️ CG is ahead of MAC leading edge (very nose heavy)\n');
+elseif cg_percent_MAC < 10
+    fprintf('⚠️ CG is very forward (high stability, high trim drag)\n');
+elseif cg_percent_MAC > 40
+    fprintf('⚠️ CG is aft (potential instability)\n');
+else
+    fprintf('✅ CG in reasonable range\n');
+end
+
+fprintf('=====================================================\n\n');
+
+%% =============== 3D Geometry Plot (Loaded / Unloaded CG) =========
 
 geom3DIn = struct();
 
+% -------- Wing geometry --------
 geom3DIn.b_m      = wingOut.b_m;
 geom3DIn.b_half_m = wingOut.b_m / 2;
 
@@ -801,138 +985,40 @@ geom3DIn.xLE_tip_m  = wingOut.xLE_tip_m;
 geom3DIn.yLE_tip_m  = wingIn.y_root_m + wingOut.semiSpan_m;
 geom3DIn.zLE_tip_m  = wingIn.z_root_m;
 
-% -------- Absolute MAC --------
+% -------- MAC --------
 geom3DIn.xLE_MAC_m = wingOut.xLE_MAC_m;
 geom3DIn.y_MAC_m   = wingIn.y_root_m + wingOut.y_MAC_m;
 geom3DIn.z_MAC_m   = wingIn.z_root_m;
 geom3DIn.MAC_m     = wingOut.MAC_m;
 
+% -------- Twist --------
 geom3DIn.twist_root_deg = twistOut.twist_root_deg;
 geom3DIn.twist_tip_deg  = twistOut.twist_tip_deg;
 
-geom3DIn.plotVertical = true;
-geom3DIn.plotBody     = true;
-geom3DIn.plotCG       = true;
+% -------- Plot options --------
+geom3DIn.plotVertical        = true;
+geom3DIn.plotBody            = false;
+geom3DIn.plotCG              = true;
+geom3DIn.plotComponents      = true;
+geom3DIn.plotComponentLabels = false;   % turn true later if you want labels
 
-% -------- Vertical surfaces: already in absolute coordinates --------
+% -------- Vertical surfaces --------
 geom3DIn.vertOut = vertOut;
 
-% -------- Simple package box --------
-geom3DIn.bodyLength_m = Vp^(1/3);
-geom3DIn.bodyWidth_m  = Vp^(1/3);
-geom3DIn.bodyHeight_m = Vp^(1/3);
+% -------- Loaded CG --------
+geom3DIn.xCG_loaded_m = massOut.cg_m(1);
+geom3DIn.yCG_loaded_m = massOut.cg_m(2);
+geom3DIn.zCG_loaded_m = massOut.cg_m(3);
 
-% Temporary CG marker
-geom3DIn.xCG_m = x_c4_MAC;
-geom3DIn.yCG_m = 0.0;
-geom3DIn.zCG_m = 0.0;
+% -------- Unloaded CG --------
+geom3DIn.xCG_unloaded_m = massOut_unloaded.cg_m(1);
+geom3DIn.yCG_unloaded_m = massOut_unloaded.cg_m(2);
+geom3DIn.zCG_unloaded_m = massOut_unloaded.cg_m(3);
+
+% -------- Components to display --------
+geom3DIn.components = comp;
 
 plotAircraftGeometry3D(geom3DIn);
-
-%% ================ Drag build up ==================
-
-%% =============== CL, CD, plots ==================
-
-% %% ============== Static Stability Analysis ===========
-% 
-% % Purpose:
-% %   Build total aircraft mass properties using CAD-based empty-airframe
-% %   values plus discrete components, then compute CG location, CG as %MAC,
-% %   and static margin using a supplied or approximate neutral point.
-% %
-% % Notes:
-% %   - SI units only
-% %   - x positive aft
-% %   - y positive right
-% %   - z positive up
-% %   - Neutral point should ultimately come from AVL / aero model
-% %
-% % Required geometry inputs from wingGeometryDesign (or equivalent):
-% %   wingOut.S_ref_m2
-% %   wingOut.b_m
-% %   wingOut.cMAC_m
-% %   wingOut.xLEMAC_m
-% %
-% % Optional:
-% %   wingOut.xAC_wing_m   % if you already compute this
-% %
-% % Assumption for temporary use only:
-% %   If no neutral point is available, use wing AC ~= xLEMAC + 0.25*cMAC
-% %   This is only a placeholder for early iteration.
-% 
-% % ---------- CAD-derived empty airframe ----------
-% cadMass.emptyAirframe.mass_kg = 0.99727226;
-% cadMass.emptyAirframe.cg_m    = [0.26519, -0.00009, 0.01560];
-% 
-% % Inertia tensor from CAD about empty-airframe CG [kg*m^2]
-% cadMass.emptyAirframe.Icg_kgm2 = 1e-4 * [ ...
-%     1307.911,   0.153,  -0.748;
-%        0.153, 272.945,   0.113;
-%       -0.748,   0.113, 1565.041 ];
-% 
-% % ---------- Optional: fuselage-only CAD data ----------
-% cadMass.fuselage.mass_kg = 0.605;
-% cadMass.fuselage.cg_m    = [0.19237805, -0.00013, 0.02017];
-% 
-% cadMass.fuselage.Icg_kgm2 = 1e-4 * [ ...
-%      24.292,   0.177,  -0.679;
-%       0.177, 112.664,  -0.024;
-%      -0.679, -0.024, 129.372 ];
-% 
-% % ---------- Component mass build-up ----------
-% % Replace these with your current values / variables as you refine.
-% comp = [];
-% 
-% % Example helper pattern:
-% % comp(end+1) = makePointMass('battery',   m_batt_kg, [x_batt_m, y_batt_m, z_batt_m]);
-% % comp(end+1) = makePointMass('motor',     m_motor_kg, [x_motor_m, y_motor_m, z_motor_m]);
-% % comp(end+1) = makePointMass('esc',       m_esc_kg,   [x_esc_m,   y_esc_m,   z_esc_m]);
-% % comp(end+1) = makePointMass('rx',        m_rx_kg,    [x_rx_m,    y_rx_m,    z_rx_m]);
-% % comp(end+1) = makePointMass('payload',   m_pay_kg,   [x_pay_m,   y_pay_m,   z_pay_m]);
-% % comp(end+1) = makePointMass('ballast',   m_bal_kg,   [x_bal_m,   y_bal_m,   z_bal_m]);
-% 
-% % ---------- Static stability inputs ----------
-% stabIn = struct();
-% 
-% % Geometry references
-% stabIn.cMAC_m   = wingOut.cMAC_m;
-% stabIn.xLEMAC_m = wingOut.xLEMAC_m;
-% stabIn.Sref_m2  = wingOut.S_ref_m2;
-% stabIn.b_m      = wingOut.b_m;
-% 
-% % Empty airframe from CAD
-% stabIn.emptyMass = cadMass.emptyAirframe;
-% 
-% % Additional discrete components
-% stabIn.components = comp;
-% 
-% % ---- Neutral point choice ----
-% % Preferred: from AVL / aero function
-% % stabIn.xNP_m = aeroOut.xNP_m;
-% 
-% % Temporary fallback if AVL not ready:
-% stabIn.useApproxNP = true;
-% stabIn.xACwingApprox_m = wingOut.xLEMAC_m + 0.25 * wingOut.cMAC_m;
-% 
-% % Optional target range
-% stabIn.SM_target_min = 0.05;
-% stabIn.SM_target_max = 0.20;
-% 
-% stabOut = staticStabilityAnalysis(stabIn);
-% 
-% fprintf('\n===== Static Stability Summary =====\n');
-% fprintf('Total mass                : %.4f kg\n', stabOut.mass_kg);
-% fprintf('CG location               : [%.4f, %.4f, %.4f] m\n', stabOut.cg_m(1), stabOut.cg_m(2), stabOut.cg_m(3));
-% fprintf('CG as %%MAC                : %.2f %%\n', 100*stabOut.xcg_over_MAC);
-% fprintf('Neutral point as %%MAC     : %.2f %%\n', 100*stabOut.xnp_over_MAC);
-% fprintf('Static margin             : %.2f %%\n', 100*stabOut.SM);
-% fprintf('Longitudinal static stable: %s\n', string(stabOut.isStaticallyStable));
-% fprintf('In target SM band         : %s\n', string(stabOut.inTargetBand));
-% 
-% if stabOut.usedApproxNP
-%     fprintf('WARNING: Neutral point currently uses approximate wing AC only.\n');
-%     fprintf('         Replace with AVL / aero-based xNP before trusting final results.\n');
-% end
 %% =========== V-n Diagram ===================
 
 %% =============== Dynamic Stability Analysis (AVL) ==============
