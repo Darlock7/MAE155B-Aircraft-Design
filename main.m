@@ -31,6 +31,8 @@
 %               CAD Design Variables
 % Version 14.0: replaces runtime XFOIL calls with prebuilt Reynolds-based
 %               airfoil surrogate database generated offline from XFOIL
+% Version 15.0: Includes Mass properties, parametric Static Stability that
+%               updates with change in wing geo and new 3d plot w/ CG
 clc; clearvars; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
