@@ -124,6 +124,17 @@ if vnIn.makeFigure
     plot([0 Vd]*speedScale, [n_pos_limit n_pos_limit], '--', 'Color', helperColor, 'LineWidth', 0.8);
     plot([0 Vd]*speedScale, [n_neg_limit n_neg_limit], '--', 'Color', helperColor, 'LineWidth', 0.8);
 
+% Gust overlay
+if isfield(vnIn,'gust') && isfield(vnIn.gust,'enable') && vnIn.gust.enable
+    Vg_plot = vnIn.gust.V_pts_mps * speedScale;
+
+    plot(Vg_plot, vnIn.gust.n_pos, '--', ...
+        'Color', [0.7 0.7 0.7], 'LineWidth', 1.0);
+
+    plot(Vg_plot, vnIn.gust.n_neg, '--', ...
+        'Color', [0.7 0.7 0.7], 'LineWidth', 1.0);
+end
+
     % key points
     plot(Va*speedScale, n_pos_limit, 'o', 'MarkerSize', 4, 'MarkerFaceColor', ptColor, 'MarkerEdgeColor', 'k');
     plot(Vd*speedScale, n_pos_limit, 'o', 'MarkerSize', 4, 'MarkerFaceColor', ptColor, 'MarkerEdgeColor', 'k');

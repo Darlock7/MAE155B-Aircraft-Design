@@ -1045,6 +1045,64 @@ vnIn.plotUnits  = 'mph';
 vnIn.Npts       = 500;
 vnIn.makeFigure = true;
 
+%% -------- Gust overlay inputs --------
+% Use class / project-required gust velocities if provided.
+% First-pass example values shown here:
+Ude_Vc_fps = 30;     % [ft/s] example at Vc
+Ude_Vd_fps = 15;     % [ft/s] example at Vd
+
+ft_to_m = 0.3048;
+Ude_Vc = Ude_Vc_fps * ft_to_m;   % [m/s]
+Ude_Vd = Ude_Vd_fps * ft_to_m;   % [m/s]
+
+% Mean 2D section lift-curve slope from surrogate airfoils
+a0_root_per_rad = airfoilOut.root.Cla_per_deg * (180/pi);
+a0_tip_per_rad  = airfoilOut.tip.Cla_per_deg  * (180/pi);
+a0_avg_per_rad  = 0.5 * (a0_root_per_rad + a0_tip_per_rad);
+
+% First-pass finite-wing lift-curve slope
+a_per_rad = a0_avg_per_rad / (1 + a0_avg_per_rad/(pi*e*AR));
+
+% Use current design values
+WS = WS_design;    % [N/m^2]
+cbar = MAC;        % [m]
+rho_g = roh;       % [kg/m^3]
+g0 = g;            % [m/s^2]
+
+% Gust alleviation factor
+mu_g = 2*WS / (rho_g * cbar * a_per_rad * g0);
+K_g  = 0.88*mu_g / (5.3 + mu_g);
+
+% Speeds used for gust overlay
+Vc = vnIn.Vc_mps;
+Vd = vnIn.Vd_mps;
+
+% Load increments at Vc and Vd
+delta_n_Vc = (K_g * rho_g * Vc * a_per_rad * Ude_Vc) / (2*WS);
+delta_n_Vd = (K_g * rho_g * Vd * a_per_rad * Ude_Vd) / (2*WS);
+
+% Store for plotting
+vnIn.gust.enable = true;
+vnIn.gust.V_pts_mps = [0, Vc, Vd];
+vnIn.gust.n_pos = [1, 1 + delta_n_Vc, 1 + delta_n_Vd];
+vnIn.gust.n_neg = [1, 1 - delta_n_Vc, 1 - delta_n_Vd];
+
+fprintf('\n================ Gust Overlay =================\n');
+fprintf('Mean 2D lift-curve slope a0   = %.4f per rad\n', a0_avg_per_rad);
+fprintf('Finite-wing lift slope a      = %.4f per rad\n', a_per_rad);
+fprintf('Wing loading W/S              = %.4f N/m^2\n', WS);
+fprintf('Mean aerodynamic chord cbar   = %.4f m\n', cbar);
+fprintf('Gust alleviation factor K_g   = %.4f\n', K_g);
+fprintf('Ude at Vc                     = %.4f m/s\n', Ude_Vc);
+fprintf('Ude at Vd                     = %.4f m/s\n', Ude_Vd);
+fprintf('Delta n at Vc                 = %.4f\n', delta_n_Vc);
+fprintf('Delta n at Vd                 = %.4f\n', delta_n_Vd);
+fprintf('Positive gust load at Vc      = %.4f\n', 1 + delta_n_Vc);
+fprintf('Negative gust load at Vc      = %.4f\n', 1 - delta_n_Vc);
+fprintf('Positive gust load at Vd      = %.4f\n', 1 + delta_n_Vd);
+fprintf('Negative gust load at Vd      = %.4f\n', 1 - delta_n_Vd);
+fprintf('================================================\n\n');
+
 % run function
 vnOut = plotVNDiagram(vnIn);
 
