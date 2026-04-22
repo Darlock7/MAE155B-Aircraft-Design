@@ -1,315 +1,219 @@
-**MAE 155B Aircraft Design Project**
-
+**MAE 155B Aircraft Design Project Setup and Workflow (Windows)**
 Overview
 
-This repository contains the MATLAB code for our MAE 155B aircraft design and analysis project.
-
-This project is set up for teammates using Windows and PowerShell.
-
-GitHub is the source of truth for the code. Do not use MATLAB Drive for editing the project.
-
-⸻
-
 **First-Time Setup on Windows**
-**1. Get access to the repository**
 
-Before doing anything else, make sure you have been added as a collaborator on GitHub.
+**1.	Get Repository Access**
 
-⸻
+Make sure you have been added as a collaborator on the GitHub repository before starting.
 
-**2. Install Git for Windows**
+**2.Install Git for Windows**
 
-Install Git for Windows from the official Git website.
+Link: https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe
+Download and install Git. After installation, open PowerShell and verify Git is installed by running:
 
-After installing, open PowerShell and verify Git is installed:
+	git –version
 
-	git --version
-
-If Git is installed correctly, PowerShell will print a version number.
+If installed correctly, it should return a version number.
 
 ⸻
 
-**3. Create an SSH key**
-
-**In PowerShell, run:**
+**3.	Create an SSH Key**
 
 	mkdir $HOME.ssh
 	ssh-keygen -t ed25519 -C “your_email@example.com”
 
-Press Enter for all prompts.
+Press Enter through all prompts unless you want a passphrase.
 
-This creates your SSH key.
+This creates:
+	•	Private key: id_ed25519
+	•	Public key: id_ed25519.pub
 
 ⸻
 
-**4. Add your SSH key to GitHub**
-
-In PowerShell, run:
+**4.Add SSH Key to GitHub**
 
 	type $HOME.ssh\id_ed25519.pub
 
-Copy the full output.
+Copy the output.
 
-Then go to:
-
-GitHub → Settings → SSH and GPG keys → New SSH key
-
-Paste the copied key and save it.
+Go to GitHub → Settings → SSH and GPG keys → New SSH key
+Paste and save.
 
 ⸻
 
-**5. Test your SSH connection**
-
-In PowerShell, run:
+**5.Test SSH Connection**
 
 	ssh -T git@github.com
 
-If prompted, type:
+Type “yes” if prompted.
 
-yes
-
-If everything is set up correctly, GitHub should respond with a message starting with:
-
-Hi YOUR_USERNAME!
+You should see a message confirming your username.
 
 ⸻
 
-**6. Clone the repository**
+**6.Clone the Repository**
 
-In PowerShell, run:
-
-	cd $HOME\Desktop
+	cd $HOME
 	git clone git@github.com:Darlock7/MAE155B-Aircraft-Design.git
 	cd MAE155B-Aircraft-Design
 
-This will create a local copy of the repository on your Desktop.
+⸻
+
+**7.Set Git Name and Email**
+
+	git config –global user.name “Your Name”
+	git config –global user.email “your_email@example.com”
 
 ⸻
 
-Running the Project
+MATLAB Setup
+	1.	Open the Repository
 
-**1. Open MATLAB**
+Set Current Folder in MATLAB to:
 
-Open MATLAB and set the Current Folder to:
-
-C:\Users\YourUserName\Desktop\MAE155B-Aircraft-Design
-
-Or, from PowerShell, you can open the folder first and then open MATLAB manually:
-
-	cd $HOME\Desktop\MAE155B-Aircraft-Design
+C:\Users\YourUserName\MAE155B-Aircraft-Design
 
 ⸻
+**2.	Run the Project**
 
-**2. Run the project**
-
-In MATLAB, run:
-
-	run_project
-	main
+run_project
+main
 
 Always run run_project before main.
 
 ⸻
 
-**Daily Workflow**
+**MATLAB Git Configuration (CRITICAL)**
 
-**Before starting work**
+Go to: Home → Settings → MATLAB → Source Control → Git
 
-**Open PowerShell and run:**
+Set the following:
+	•	Enable SSH
+	•	Uncheck “Use SSH agent”
+	•	Public key file:
+C:\Users\YourUserName.ssh\id_ed25519.pub
+	•	Private key file:
+C:\Users\YourUserName.ssh\id_ed25519
 
-	cd $HOME\Desktop\MAE155B-Aircraft-Design
-	git pull
-
-**Then open MATLAB and run:**
-
-run_project
-main
+If this is not configured correctly, MATLAB push/pull will fail.
 
 ⸻
 
-**After making changes**
+MATLAB GUI Workflow (Primary Method)
 
-Save your work in MATLAB.
+Before Starting Work
+	1.	Open MATLAB
+	2.	Navigate to the repository folder
+	3.	Click Source Control → Pull
 
-Then in PowerShell, run:
+⸻
 
-	cd $HOME\Desktop\MAE155B-Aircraft-Design
+If Pull Fails
+
+This usually means local changes would be overwritten.
+
+Fix:
+	1.	Open “View Changes”
+	2.	Right-click modified file (e.g., main.m)
+	3.	Choose:
+	•	Discard Changes (to delete local edits)
+	•	Commit Changes (to keep them)
+	4.	Try Pull again
+
+⸻
+
+While Working
+	•	Edit and save files in MATLAB
+	•	Avoid renaming/moving files unless necessary
+
+⸻
+
+After Making Changes (Push)
+	1.	Open “View Changes”
+	2.	Select modified files
+	3.	Enter commit message
+	4.	Click Commit
+	5.	Click Push
+
+⸻
+
+Required Daily Workflow
+	1.	Open MATLAB
+	2.	Pull latest changes
+	3.	Run run_project
+	4.	Run main
+	5.	Make changes
+	6.	Save files
+	7.	Commit
+	8.	Push
+
+⸻
+
+PowerShell Fallback (If MATLAB Fails)
+
+**If MATLAB fails (push, pull, SSH issues), use:**
+
+	cd C:\Users\YourUserName\MAE155B-Aircraft-Design
+	git pull
 	git add .
-	git commit -m “describe your changes”
+	git commit -m “your message”
 	git push
 
-Use a short, clear commit message.
-
-**Examples:**
-
-git commit -m “Updated propulsion analysis”
-git commit -m “Fixed airfoil path issue”
-git commit -m “Improved mission profile calculations”
-
 ⸻
-**Project Structure**
-main.m
-Main entry point for the project
 
-run_project.m
-Loads all project paths
+Force Pull (Overwrite Local Changes)
 
-src/geometry
-Geometry design functions
+If you want to completely overwrite your local files:
 
-src/aerodynamics
-Aerodynamic analysis and supporting models
+git fetch origin
+git reset –hard origin/main
 
-src/propulsion
-Propulsion analysis functions
-
-src/mission
-Mission profile functions
-
-src/energy
-Energy calculation functions
-
-src/economics
-Optimization and cost analysis functions
-
-plotting
-Plotting and visualization utilities
-
-data/airfoils
-Airfoil .dat files
-
-data/propellers
-Propeller data files
-
-data/models
-Model and surrogate data files
-
-data/reference
-Reference text files
-
-external/xfoil/bin
-XFOIL executables used by the code
-
-archive/old_main_versions
-Older versions of main scripts kept for reference
+WARNING: This deletes all local changes permanently.
 
 ⸻
 
-**Important Rules**
+Common Problems
+	1.	Git not recognized
+Fix: reinstall Git and restart PowerShell.
+	2.	Permission denied (publickey)
+Fix: verify your SSH key:
 
-Always run:
+type $HOME.ssh\id_ed25519.pub
 
-run_project
-
-before running:
-
-main
-
-Always run:
+Ensure it matches GitHub.
+	3.	MATLAB cannot connect to SSH agent
+Fix: disable SSH agent in MATLAB and manually set key paths.
+	4.	Push rejected (remote ahead)
+Fix:
 
 git pull
 
-before starting work.
-
-Do not use MATLAB Drive as the source of truth.
-
-Do not move, rename, or delete files unless you know exactly what you are doing.
-
-Do not commit generated files such as:
-
-xfoil_input_*
-xfoil_polar_*
-*.asv
-conflict_copy
-
-Do not edit directly on GitHub unless absolutely necessary.
-
-⸻
-
-**Common PowerShell Commands**
-
-Go to the repo folder:
-
-cd $HOME\Desktop\MAE155B-Aircraft-Design
-
-Check Git status:
-
-git status
-
-Pull latest changes:
-
-git pull
-
-Stage all changes:
-
-git add .
-
-Commit changes:
-
-git commit -m “your message”
-
-Push changes:
+Resolve conflicts if needed, then:
 
 git push
+	5.	Merge conflicts
+Look for markers like:
 
-Show your SSH public key:
+<<<<<<< HEAD
 
-type $HOME.ssh\id_ed25519.pub
+Fix the file, then:
 
-Test GitHub SSH connection:
-
-ssh -T git@github.com
-
-⸻
-**Common Problems**
-
-Git is not recognized
-
-If PowerShell says git is not recognized, Git is not installed correctly. Install Git for Windows and restart PowerShell.
-
-Check again with:
-
-git –version
+git add filename
+git commit -m “resolve conflict”
+git push
 
 ⸻
 
-Permission denied (publickey)
-
-If you see:
-
-Permission denied (publickey)
-
-your SSH key was not added correctly to GitHub.
-
-Check your key with:
-
-type $HOME.ssh\id_ed25519.pub
-
-Then make sure that exact key is added to your GitHub account.
+Best Practice
+	•	Use MATLAB GUI for pull, commit, and push
+	•	Always pull before starting work
+	•	Use PowerShell if MATLAB fails
+	•	Do not edit files directly on GitHub unless necessary
+	•	Do not commit generated files
 
 ⸻
 
-MATLAB cannot find files
+Final Note
 
-Make sure you opened the correct repository folder and ran:
-
-run_project
-
-before running:
-
-main
-
-⸻
-
-Standard Team Workflow
-	1.	Open PowerShell
-	2.	Go to the repo folder
-	3.	Run git pull
-	4.	Open MATLAB
-	5.	Run run_project
-	6.	Run main
-	7.	Make your changes
-	8.	Save your files
-	9.	In PowerShell, run git add .
-	10.	Run git commit -m "message"
-	11.	Run git push
+This workflow ensures MATLAB GUI works reliably on Windows. PowerShell is always the fallback when GUI operations fail.
