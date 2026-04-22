@@ -12,7 +12,7 @@ Make sure you have been added as a collaborator on the GitHub repository before 
 Link: https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/Git-2.54.0-64-bit.exe
 Download and install Git. After installation, open PowerShell and verify Git is installed by running:
 
-	git –version
+	git -–version
 
 If installed correctly, it should return a version number.
 
