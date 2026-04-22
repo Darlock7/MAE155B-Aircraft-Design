@@ -823,7 +823,7 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.16,  0.000,  0.000]);
 
 % ---- Battery / avionics ----
-comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.45, 0.000, 0.000]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.25, 0.000, 0.000]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.45, 0.000, 0.000]);
 
 % ---- Payload ----
@@ -965,6 +965,60 @@ else
 end
 
 fprintf('=====================================================\n\n');
+
+%% ============== Static Stability Analysis ==================
+fprintf('\n================ Static Stability Analysis =================\n');
+
+stabIn = struct();
+
+% -------- Geometry references --------
+stabIn.cMAC_m   = wingOut.MAC_m;
+stabIn.xLEMAC_m = wingOut.xLE_MAC_m;
+
+% -------- Loaded / unloaded CGs from mass model --------
+stabIn.cg_loaded_m   = massOut.cg_m;
+stabIn.cg_unloaded_m = massOut_unloaded.cg_m;
+
+% -------- Neutral point choice --------
+% Preferred final path:
+% stabIn.xNP_m = aeroOut.xNP_m;   % from AVL / aerodynamic model
+
+% Temporary fallback:
+stabIn.useApproxNP     = true;
+stabIn.xACwingApprox_m = wingOut.xLE_MAC_m + 0.25 * wingOut.MAC_m;
+
+% -------- Optional target band --------
+stabIn.SM_target_min = 0.10;   % 10%
+stabIn.SM_target_max = 0.20;   % 20%
+
+stabOut = staticStabilityAnalysisNP_SM(stabIn);
+
+fprintf('Neutral point x_NP             = %.4f m\n', stabOut.xNP_m);
+fprintf('Neutral point                  = %.2f %% MAC\n', 100*stabOut.loaded.xnp_over_MAC);
+
+fprintf('\n---- Loaded case ----\n');
+fprintf('CG                            = %.4f m\n', stabOut.loaded.xcg_m);
+fprintf('CG                            = %.2f %% MAC\n', 100*stabOut.loaded.xcg_over_MAC);
+fprintf('Static margin                 = %.2f %%\n', 100*stabOut.loaded.SM);
+fprintf('Statically stable             = %s\n', string(stabOut.loaded.isStaticallyStable));
+fprintf('In target band (10-20%%)       = %s\n', string(stabOut.loaded.inTargetBand));
+
+fprintf('\n---- Unloaded case ----\n');
+fprintf('CG                            = %.4f m\n', stabOut.unloaded.xcg_m);
+fprintf('CG                            = %.2f %% MAC\n', 100*stabOut.unloaded.xcg_over_MAC);
+fprintf('Static margin                 = %.2f %%\n', 100*stabOut.unloaded.SM);
+fprintf('Statically stable             = %s\n', string(stabOut.unloaded.isStaticallyStable));
+fprintf('In target band (10-20%%)       = %s\n', string(stabOut.unloaded.inTargetBand));
+
+fprintf('\nCG shift due to payload removal = %.2f %% MAC\n', ...
+    100*(stabOut.unloaded.xcg_over_MAC - stabOut.loaded.xcg_over_MAC));
+
+if stabOut.usedApproxNP
+    fprintf('\nWARNING: Neutral point currently uses approximate wing AC only.\n');
+    fprintf('         Replace with AVL / aero-based xNP before trusting final stability margins.\n');
+end
+
+fprintf('==============================================================\n\n');
 
 %% =============== 3D Geometry Plot (Loaded / Unloaded CG) =========
 
