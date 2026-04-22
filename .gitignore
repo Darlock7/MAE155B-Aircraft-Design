@@ -1,3 +1,6 @@
+# Claude local settings (machine-specific, not for git)
+.claude/settings.local.json
+
 # MATLAB temp/autosave
 *.asv
 *.m~

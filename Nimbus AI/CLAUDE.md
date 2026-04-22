@@ -34,6 +34,14 @@ Keep it tight — only include what's actually relevant to the specific response
 
 ---
 
+## Design Parameters
+
+All fixed design values, measured data, and data file references live in `Nimbus AI/PARAMETERS.md`. Read it before any physics analysis, code work, or design decision. If a parameter needed for a task is missing from that file, flag it and ask before proceeding.
+
+Excel and measured data files are stored in `data/`. When a file is added, it should also be referenced in `PARAMETERS.md`.
+
+---
+
 ## Defaults
 
 - **Language:** MATLAB
@@ -53,6 +61,19 @@ All course PDFs are in `class_material/`:
 - `Reports&Presentations/` — team reports and presentations
 
 When a question involves theory covered in these slides, read the relevant PDF and ground your answer in it. If a formula or method from class conflicts with what is coded, flag it.
+
+---
+
+## Running MATLAB
+
+Always run `run_project.m` before `main.m`. It loads all project paths — without it, functions in `src/` will not be found and the script will crash.
+
+From the terminal:
+```
+matlab -batch "run('run_project.m'); run('main.m')"
+```
+
+Never run `main.m` alone.
 
 ---
 
