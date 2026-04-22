@@ -8,31 +8,33 @@
 % paste sections to avoid mistakes
 
 % Version Evolution:
-% Version 1.0: calls J(x) function
-% Version 1.1: uses energyCalc(...) as a separate function
-% Version 1.2: couples VPS to payload volume, effective L/D, and effective
-%              empty-weight fraction
-% Version 2.0: includes mission profile via missionProfileCigar(mission)
-% Version 3.0: introduces aero assumptions (CL, L/D, etc.)
-% Version 4.0: includes propulsion sizing via propulsionAnalysis(...)
-% Version 5.0: includes CTOL sizing equations via preliminarySizingCTOL(...)
-% Version 6.0: includes wing geometry design variables via wingGeometryDesign(...)
-% Version 7.0: integrates XFOIL airfoil analysis via airfoilAnalysisXFOIL(...)
-% Version 8.0: extracts detailed airfoil parameters (Clalpha, Cm0, alphaL0,
-%              Clmax, and best L/D)
-% Version 9.0: introduces spanwise twist modeling via twistFunctionPanknin(...)
-% Version 10.0: adds vertical stabilizer / winglet sizing via
+% Version 1.0:   calls J(x) function
+% Version 1.1:   uses energyCalc(...) as a separate function
+% Version 1.2:   couples VPS to payload volume, effective L/D, and effective
+%               empty-weight fraction
+% Version 2.0:   includes mission profile via missionProfileCigar(mission)
+% Version 3.0:   introduces aero assumptions (CL, L/D, etc.)
+% Version 4.0:   includes propulsion sizing via propulsionAnalysis(...)
+% Version 5.0:   includes CTOL sizing equations via preliminarySizingCTOL(...)
+% Version 6.0:   includes wing geometry design variables via wingGeometryDesign(...)
+% Version 7.0:   integrates XFOIL airfoil analysis via airfoilAnalysisXFOIL(...)
+% Version 8.0:   extracts detailed airfoil parameters (Clalpha, Cm0, alphaL0,
+%               Clmax, and best L/D)
+% Version 9.0:   introduces spanwise twist modeling via twistFunctionPanknin(...)
+% Version 10.0:  adds vertical stabilizer / winglet sizing via
 %               verticalSurfaceDesign(...)
-% Version 11.0: implements spanwise aerodynamic estimation via
+% Version 11.0:  implements spanwise aerodynamic estimation via
 %               spanwiseAeroEstimate(...)
-% Version 12.0: introduces 3D aircraft geometry visualization via
+% Version 12.0:  introduces 3D aircraft geometry visualization via
 %               plotAircraftGeometry3D(...)
-% Version 13.0: Organizes user input into blocks USER Input, and 
+% Version 13.0:  Organizes user input into blocks USER Input, and 
 %               CAD Design Variables
-% Version 14.0: replaces runtime XFOIL calls with prebuilt Reynolds-based
+% Version 14.0:  replaces runtime XFOIL calls with prebuilt Reynolds-based
 %               airfoil surrogate database generated offline from XFOIL
-% Version 15.0: Includes Mass properties, parametric Static Stability that
+% Version 15.0:  Includes Mass properties, parametric Static Stability that
 %               updates with change in wing geo and new 3d plot w/ CG
+% Version 16.0:  Adds Drag Build-up, and proper L/D ratio, and respective
+%               Plots
 clc; clearvars; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
