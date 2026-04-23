@@ -19,3 +19,5 @@ end
 addpath(keepPaths{:});
 disp('Project paths loaded.');
 disp(['Repo root: ', repoRoot]);
+
+%test
