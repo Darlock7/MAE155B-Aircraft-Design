@@ -68,7 +68,7 @@ fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
 %   Vp = 0.010 m^3  --> VPS = 10
 
 Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
-Vp     = 0.002;            % [m^3] actual payload 
+Vp     = 0.0029;            % [m^3] actual payload 
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
 % -------- Aerodynamic penalty model for package volume --------
@@ -230,7 +230,7 @@ mission.runwayLength_m    = 138.35;    % [m]
 mission.straightLength_m  = 140.0;     % [m]
 mission.liftoffFrac       = 0.85;      % [-]
 mission.touchdownFrac     = 1/3;       % [-]
-mission.n_turn            = 1.2;       % [-]
+mission.n_turn            = 1.5;       % [-] working @ 1.2
 
 % -------- Climb / descent design choices --------
 mission.delta_h           = delta_h;   % [m] altitude gain
@@ -324,7 +324,7 @@ sIn.n_maneuver  = mission.n_turn;        % [-]
 % Takeoff sizing from mission geometry
 sIn.use_takeoff = true;
 sIn.rho_takeoff = roh;
-sIn.TOP_m       = mission.runwayLength_m;
+sIn.TOP_m       = mission.runwayLength_m - 10;
 
 % Optional ceiling sizing
 sIn.use_ceiling   = false;
@@ -924,7 +924,7 @@ comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 % ---- Main propulsion ----
 comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
-comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.16,  0.000,  0.000]);
+comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.20,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
 comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.33, 0.000, 0.000]);
