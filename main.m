@@ -904,7 +904,7 @@ fprintf('\n================ Aircraft Mass Properties =================\n');
 cadMass = struct();
 
 cadMass.fuselageOnly.name    = 'Fuselage CAD';
-cadMass.fuselageOnly.mass_kg = 0.605;                        % [kg] <-- replace
+cadMass.fuselageOnly.mass_kg = 0.634;                        % [kg] <-- replace
 cadMass.fuselageOnly.cg_m    = [.26991149, 0.0, .0208886];  % [m]  <-- replace
 
 cadMass.fuselageOnly.Icg_kgm2 =  [ ...
