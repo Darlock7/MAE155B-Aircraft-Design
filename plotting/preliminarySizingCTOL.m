@@ -13,10 +13,8 @@ function sizing = preliminarySizingCTOL(inp)
 %
 % Notes:
 %   - Sizing is carried out in T/W form.
-%   - Propulsion data are used only to report available thrust at key speeds.
-%   - Takeoff constraint uses the lecture-summary form:
-%         T/W >= (W/S) / (TOP * sigma * CL_takeoff)
-%     where sigma = rho_takeoff / rho_sl and CL_takeoff = CLmax / 1.21
+%   - Propulsion data are used to report available thrust at key speeds.
+%   - This version also visualizes available T/W at climb and turn speeds.
 
 %% -------------------------
 % Unpack inputs
@@ -55,8 +53,8 @@ Npts   = inp.Npts;
 buf_WS = inp.buf_WS;
 buf_TW = inp.buf_TW;
 
-propV_vec_mps = inp.propV_vec_mps;
-propT_vec_N   = inp.propT_vec_N;
+propV_vec_mps = inp.propV_vec_mps(:);
+propT_vec_N   = inp.propT_vec_N(:);
 
 %% -------------------------
 % Basic input checks
@@ -122,7 +120,7 @@ TW_maneuver = (CD0 .* q_turn ./ WS_vec) + ...
 % -------------------------
 if use_takeoff
     sigma_takeoff = rho_takeoff / rho_sl;    % [-]
-    CL_takeoff    = CLmax / 1.21;            % [-]
+    CL_takeoff    = 1.20;                    % [-] first-pass RC takeoff CL
     TW_takeoff    = WS_vec ./ (TOP_m .* sigma_takeoff .* CL_takeoff);
 else
     sigma_takeoff = NaN;
@@ -147,15 +145,19 @@ end
 TW_stack = [TW_climb;
             TW_maneuver];
 
+stackNames = {'Climb', 'Maneuver'};
+
 if use_takeoff
     TW_stack = [TW_stack; TW_takeoff];
+    stackNames{end+1} = 'Takeoff'; %#ok<AGROW>
 end
 
 if use_ceiling
     TW_stack = [TW_stack; TW_ceiling * ones(size(WS_vec))];
+    stackNames{end+1} = 'Ceiling'; %#ok<AGROW>
 end
 
-TW_req = max(TW_stack, [], 1);
+[TW_req, idxActive] = max(TW_stack, [], 1);
 
 %% -------------------------
 % Feasible region from stall
@@ -184,6 +186,27 @@ TW_design     = TW_req_design * (1 + buf_TW);
 
 T_design_N = TW_design * W0_N;
 
+% Governing constraint at design point
+TW_climb_design    = interp1(WS_vec, TW_climb,    WS_design, 'linear', 'extrap');
+TW_maneuver_design = interp1(WS_vec, TW_maneuver, WS_design, 'linear', 'extrap');
+
+if use_takeoff
+    TW_takeoff_design = interp1(WS_vec, TW_takeoff, WS_design, 'linear', 'extrap');
+else
+    TW_takeoff_design = -inf;
+end
+
+if use_ceiling
+    TW_ceiling_design = TW_ceiling;
+else
+    TW_ceiling_design = -inf;
+end
+
+TW_design_components = [TW_climb_design, TW_maneuver_design, TW_takeoff_design, TW_ceiling_design];
+nameDesign = {'Climb','Maneuver','Takeoff','Ceiling'};
+[~, idxGov] = max(TW_design_components);
+governingConstraint = nameDesign{idxGov};
+
 %% -------------------------
 % Available propulsion at key speeds
 % -------------------------
@@ -192,6 +215,9 @@ T_avail_turn_N  = interp1(propV_vec_mps, propT_vec_N, V_turn_mps,  'linear', 'ex
 
 TW_avail_climb = T_avail_climb_N / W0_N;
 TW_avail_turn  = T_avail_turn_N  / W0_N;
+
+isFeasibleAtClimb = TW_avail_climb >= TW_design;
+isFeasibleAtTurn  = TW_avail_turn  >= TW_design;
 
 %% -------------------------
 % Unit conversions
@@ -226,6 +252,10 @@ sizing.T_avail_climb_N = T_avail_climb_N;
 sizing.T_avail_turn_N  = T_avail_turn_N;
 sizing.TW_avail_climb  = TW_avail_climb;
 sizing.TW_avail_turn   = TW_avail_turn;
+
+sizing.governingConstraint = governingConstraint;
+sizing.isFeasibleAtClimb   = isFeasibleAtClimb;
+sizing.isFeasibleAtTurn    = isFeasibleAtTurn;
 
 sizing.use_takeoff   = use_takeoff;
 sizing.sigma_takeoff = sigma_takeoff;
@@ -262,6 +292,13 @@ if use_ceiling
     leg{end+1} = 'Ceiling';
 end
 
+% Available T/W lines
+h(end+1) = yline(ax, TW_avail_climb, '--', 'LineWidth', 1.5);
+leg{end+1} = sprintf('Available T/W @ climb (%.2f m/s)', V_climb_mps);
+
+h(end+1) = yline(ax, TW_avail_turn, ':', 'LineWidth', 1.5);
+leg{end+1} = sprintf('Available T/W @ turn (%.2f m/s)', V_turn_mps);
+
 h(end+1) = plot(ax, WS_best, TW_best, 'o', 'MarkerSize', 8, 'LineWidth', 2);
 leg{end+1} = 'Best point';
 
@@ -279,12 +316,17 @@ txt = sprintf([ ...
     'W/S = %.1f N/m^2 | %.3f lbf/ft^2\n' ...
     'T/W = %.4f\n' ...
     'Treq = %.3f N\n' ...
-    'Tavail@climb = %.3f N\n' ...
-    'Tavail@turn  = %.3f N'], ...
-    WS_design, WS_design_imp, TW_design, T_design_N, ...
-    T_avail_climb_N, T_avail_turn_N);
+    'Gov. = %s\n' ...
+    'Tavail@climb = %.3f N (T/W = %.4f)\n' ...
+    'Tavail@turn  = %.3f N (T/W = %.4f)\n' ...
+    'Feasible@climb: %d\n' ...
+    'Feasible@turn : %d'], ...
+    WS_design, WS_design_imp, TW_design, T_design_N, governingConstraint, ...
+    T_avail_climb_N, TW_avail_climb, ...
+    T_avail_turn_N,  TW_avail_turn, ...
+    isFeasibleAtClimb, isFeasibleAtTurn);
 
-annotation(fig, 'textbox', [0.54 0.12 0.32 0.20], ...
+annotation(fig, 'textbox', [0.52 0.10 0.36 0.24], ...
     'String', txt, ...
     'FitBoxToText', 'on', ...
     'BackgroundColor', 'w', ...
@@ -309,6 +351,7 @@ fprintf('WS_design           = %8.2f N/m^2 | %8.3f lbf/ft^2\n', ...
     WS_design, WS_design_imp);
 fprintf('TW_design           = %8.5f\n', TW_design);
 fprintf('T_design            = %8.3f N\n', T_design_N);
+fprintf('Governing constraint= %s\n', governingConstraint);
 
 if use_takeoff
     fprintf('Takeoff sigma       = %8.4f\n', sigma_takeoff);
@@ -324,6 +367,8 @@ fprintf('T_avail @ climb     = %8.3f N  | T/W = %8.5f\n', ...
     T_avail_climb_N, TW_avail_climb);
 fprintf('T_avail @ turn      = %8.3f N  | T/W = %8.5f\n', ...
     T_avail_turn_N, TW_avail_turn);
+fprintf('Feasible @ climb?   = %d\n', isFeasibleAtClimb);
+fprintf('Feasible @ turn?    = %d\n', isFeasibleAtTurn);
 fprintf('============================================================\n\n');
 
 end

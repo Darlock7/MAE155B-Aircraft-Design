@@ -89,8 +89,8 @@ CLmax = 0.92863;               % [-] first-pass max lift coefficient
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 23;             % [m/s] chosen cruise speed
-V_stall_mps = 14;   % [m/s] chosen Stall speed
+V_cruise = 26;             % [m/s] chosen cruise speed
+V_stall_mps = 13;   % [m/s] chosen Stall speed
 Wp_g = 800;                % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
@@ -230,12 +230,12 @@ mission.runwayLength_m    = 138.35;    % [m]
 mission.straightLength_m  = 140.0;     % [m]
 mission.liftoffFrac       = 0.85;      % [-]
 mission.touchdownFrac     = 1/3;       % [-]
-mission.n_turn            = 1.6;       % [-]
+mission.n_turn            = 1.2;       % [-]
 
 % -------- Climb / descent design choices --------
 mission.delta_h           = delta_h;   % [m] altitude gain
 
-mission.V_climb_mps       = 18.0;      % [m/s] forward climb speed
+mission.V_climb_mps       = 11.0;      % [m/s] forward climb speed
 mission.gamma_climb_deg   = 6.0;       % [deg] UPDATED (was too aggressive)
 
 mission.V_descent_mps     = 30.0;      % [m/s]
@@ -318,13 +318,13 @@ sIn.V_climb_mps = mission.V_climb_mps;   % [m/s]
 sIn.G_climb     = mission.G_climb;       % [-]
 
 % Maneuver sizing
-sIn.V_turn_mps  = mission.V_pattern;     % [m/s]
+sIn.V_turn_mps  = 11;     % [m/s]
 sIn.n_maneuver  = mission.n_turn;        % [-]
 
 % Takeoff sizing from mission geometry
 sIn.use_takeoff = true;
 sIn.rho_takeoff = roh;
-sIn.TOP_m       = mission.liftoffFrac * mission.runwayLength_m;
+sIn.TOP_m       = mission.runwayLength_m;
 
 % Optional ceiling sizing
 sIn.use_ceiling   = false;
