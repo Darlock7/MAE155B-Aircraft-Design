@@ -905,12 +905,12 @@ cadMass = struct();
 
 cadMass.fuselageOnly.name    = 'Fuselage CAD';
 cadMass.fuselageOnly.mass_kg = 0.634;                        % [kg] <-- replace
-cadMass.fuselageOnly.cg_m    = [.26991149, 0.0, .0208886];  % [m]  <-- replace
+cadMass.fuselageOnly.cg_m    = [0.27278876, 0.0, -5.175e-8];  % [m]  <-- replace
 
 cadMass.fuselageOnly.Icg_kgm2 =  [ ...
-     0.00227939,   0.0000163,  -0.00002039; ...
-      0.0000163, 0.01168893,  -0.00000233; ...
-     -0.00002039, -0.00000233, 0.0131732 ];                             % [kg*m^2] <-- replace
+     0.00279075,   1.452e-8,  -0.00042382; ...
+      1.452e-8, 0.01708973,  1.169e-8; ...
+     -0.00042382, 1.169e-8, 0.01890463 ];                             % [kg*m^2] <-- replace
 
 % -------------------------------------------------------------------------
 % Discrete point masses
@@ -927,11 +927,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.20,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.33, 0.000, 0.000]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.37, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.45, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [x_c4_MAC, 0.000, 0.009]);
+comp(end+1) = makePointMass('Payload', Wp/g, [x_c4_MAC, 0.000, -0.01750000/2]);
 
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
