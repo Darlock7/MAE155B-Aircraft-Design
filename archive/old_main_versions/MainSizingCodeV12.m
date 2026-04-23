@@ -27,9 +27,10 @@
 %               spanwiseAeroEstimate(...)
 % Version 12.0: introduces 3D aircraft geometry visualization via
 %               plotAircraftGeometry3D(...)
-% Version 13.0: Organizes user input into blocks USER Input, and 
+% Version 13.0: Organizes user input into blocks USER Input, and
 %               CAD Design Variables
 
+% Claude Code is connected and working
 clc; clearvars; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
