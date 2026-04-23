@@ -109,12 +109,12 @@ useDragBuildUp = true;     % true = compute CD0 from geometry, false = use CD0 b
 CD0_user = CD0;            % [-]
 
 % ---- wetted areas ----
-Swet_wing = 0.50844919;        % [m^2] total wing wetted area
-Swet_fuse = 0.20135732;        % [m^2] centerbody / fuselage wetted area
-Swet_fin  = 0.10995794;        % [m^2] total wetted area of both fins
+Swet_wing = 0.64897702;        % [m^2] total wing wetted area
+Swet_fuse = 0.21672003;        % [m^2] centerbody / fuselage wetted area
+Swet_fin  = 0.14780168;        % [m^2] total wetted area of both fins
 
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.55666667;               % [m] body length
+Lf = 0.62000000;               % [m] body length
 Wf = 0.16635000;               % [m] max body width
 Hf = 0.10145110;               % [m] max body height
 
