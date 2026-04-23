@@ -52,7 +52,7 @@ roh = 1.19;                % [kg/m^3] first-pass June density near SeaWorld
 
 % (i) Engineering assumptions:
 eta_p = 0.75;              % [-] propulsion efficiency
-LD = 20;                   % [-] baseline first-pass L/D
+LD = 11.15666;                   % [-] From AC polar
 reserve_factor = 1.15;     % [-] energy margin multiplier
 
 % -------- Baseline empty-weight fraction --------
@@ -82,15 +82,15 @@ fe_max = 0.60;             % [-] hard upper cap for sanity
 
 % (i) Aero:
 e     = 0.80;              % [-] Oswald efficiency factor
-CD0   = 0.030;             % [-] first-pass parasite drag estimate
-CLmax = 1.8;               % [-] first-pass max lift coefficient
+CD0   = 0.01224;             % [-] first-pass parasite drag estimate
+CLmax = 0.92863;               % [-] first-pass max lift coefficient
 
 % (i) Mission Parameters:
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 20;             % [m/s] chosen cruise speed
-V_stall_mps = 0.50 * V_cruise;   % [m/s]
+V_cruise = 23;             % [m/s] chosen cruise speed
+V_stall_mps = 14;   % [m/s] chosen Stall speed
 Wp_g = 800;                % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
@@ -135,7 +135,7 @@ alphaPolar_deg = -12:0.25:16;   % [deg]
 if VPS <= 1
     LD_eff = LD;
 else
-    LD_eff = LD / (1 + kd*(VPS - 1));
+    LD_eff = LD; %/ (1 + kd*(VPS - 1));
 end
 
 if VPS <= 1
@@ -237,7 +237,7 @@ mission.delta_h           = delta_h;   % [m] altitude gain
 mission.V_climb_mps       = 14.0;      % [m/s] forward climb speed
 mission.gamma_climb_deg   = 11.0;       % [deg]
 
-mission.V_descent_mps     = 25.0;      % [m/s] forward descent speed
+mission.V_descent_mps     = 30.0;      % [m/s] forward descent speed
 mission.gamma_descent_deg = 12.0;       % [deg]
 
 % -------- Derived climb / descent quantities --------
@@ -286,7 +286,7 @@ propIn.D_in      = 10;            % [in]
 propIn.pitch_in  = 4.5;           % [in]
 
 % Speed grid
-propIn.V_vec_mps = linspace(0,25,150);
+propIn.V_vec_mps = linspace(0,40,250);   % expand search range
 
 % Mode switch
 propIn.usePrelimModel = false;
@@ -331,7 +331,7 @@ sIn.use_ceiling   = false;
 sIn.V_ceiling_mps = mission.V_pattern;
 
 % Plot / search domain
-sIn.WS_min = 5;
+sIn.WS_min = 1;
 sIn.WS_max = 150;
 sIn.Npts   = 500;
 
@@ -1018,6 +1018,7 @@ fprintf('Ixz = %.6f kg*m^2\n', massOut.Icg_kgm2(1,3));
 fprintf('Iyz = %.6f kg*m^2\n', massOut.Icg_kgm2(2,3));
 fprintf('=============================================================\n\n');
 
+
 %% ============== Unloaded Mass Case ==================
 % Remove payload only; payload location remains fixed by design
 
@@ -1070,6 +1071,77 @@ end
 
 fprintf('=====================================================\n\n');
 
+%% ============== Updated Performance State =================
+fprintf('\n================ Updated Performance State =================\n');
+
+perfIn = struct();
+
+% Use loaded aircraft weight from mass model
+perfIn.rho_kgm3 = roh;                 % [kg/m^3]
+perfIn.W_N      = massOut.weight_N;    % [N]
+perfIn.Sref_m2  = S_ref;               % [m^2]
+
+% Refined aero
+perfIn.CD0   = aeroOut.CD0;            % [-]
+perfIn.CLmax = aeroOut.CLmax_3D;       % [-]
+perfIn.e     = e;                      % [-]
+perfIn.AR    = AR;                     % [-]
+
+% Propulsion
+perfIn.V_vec_mps = propOut.V_vec_mps(:);
+perfIn.T_vec_N   = propOut.T_vec_N(:);
+
+% Selected climb-evaluation speed
+perfIn.V_climb_eval_mps = mission.V_climb_mps;   % [m/s]
+perfIn.CLTO_frac        = 0.8;                   % [-]
+
+perfOut = updatePerformanceState(perfIn);
+
+fprintf('Loaded weight W               = %.4f N\n', massOut.weight_N);
+fprintf('Updated stall speed Vs        = %.4f m/s\n', perfOut.Vs_mps);
+fprintf('Estimated takeoff speed VTO   = %.4f m/s\n', perfOut.VTO_mps);
+fprintf('Takeoff CL used               = %.4f\n', perfOut.CLTO);
+
+if perfOut.validCruise
+    fprintf('Solved cruise speed           = %.4f m/s\n', perfOut.Vcruise_mps);
+    fprintf('Solved cruise speed           = %.2f mph\n', perfOut.Vcruise_mps * 2.23694);
+    fprintf('Cruise CL                     = %.5f\n', perfOut.CLcruise);
+    fprintf('Cruise CD                     = %.5f\n', perfOut.CDcruise);
+    fprintf('Cruise L/D                    = %.5f\n', perfOut.LDcruise);
+else
+    fprintf('No thrust-drag cruise intersection found in current speed range.\n');
+end
+
+fprintf('Eval climb speed              = %.4f m/s\n', perfOut.Vclimb_eval_mps);
+fprintf('Thrust at climb speed         = %.4f N\n', perfOut.Tclimb_N);
+fprintf('Drag at climb speed           = %.4f N\n', perfOut.Dclimb_N);
+fprintf('Max climb gradient at Vclimb  = %.5f\n', perfOut.G_climb_max);
+fprintf('Max climb rate at Vclimb      = %.5f m/s\n', perfOut.ROC_climb_max_mps);
+fprintf('============================================================\n\n');
+
+% Extract actual performance (DO NOT FEED BACK)
+
+V_stall_actual = perfOut.Vs_mps;
+
+if perfOut.validCruise
+    V_cruise_actual = perfOut.Vcruise_mps;
+else
+    V_cruise_actual = NaN;
+end
+
+fprintf('\n===== PERFORMANCE CONSISTENCY CHECK =====\n');
+fprintf('Design stall speed  = %.3f m/s\n', V_stall_mps);
+fprintf('Actual stall speed  = %.3f m/s\n', V_stall_actual);
+
+if perfOut.validCruise
+    fprintf('Design cruise speed = %.3f m/s\n', V_cruise);
+    fprintf('Actual cruise speed = %.3f m/s\n', V_cruise_actual);
+end
+fprintf('========================================\n\n');
+
+if perfOut.G_climb_max < mission.G_climb
+    warning('Required climb gradient exceeds available climb gradient at selected climb speed.');
+end
 %% ============== Static Stability Analysis ==================
 fprintf('\n================ Static Stability Analysis =================\n');
 
@@ -1123,6 +1195,7 @@ if stabOut.usedApproxNP
 end
 
 fprintf('==============================================================\n\n');
+
 
 %% =============== 3D Geometry Plot (Loaded / Unloaded CG) =========
 
