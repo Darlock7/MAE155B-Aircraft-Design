@@ -90,7 +90,7 @@ delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
 V_cruise = 26;             % [m/s] chosen cruise speed
-V_stall_mps = 13;   % [m/s] chosen Stall speed
+V_stall_mps = 12;   % [m/s] chosen Stall speed
 Wp_g = 800;                % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
@@ -867,30 +867,30 @@ aeroIn.Q_fin  = Q_fin;
 aeroIn.alpha_vec_deg = alphaPolar_deg;
 aeroIn.plotFigures   = true;
 
-% -------- Run aircraft aero polar --------
-%aeroOut = aeroPolarAircraft(aeroIn);
+%-------- Run aircraft aero polar --------
+aeroOut = aeroPolarAircraft(aeroIn);
 
-% -------- Feed back useful outputs into main --------
-%CD0   = aeroOut.CD0;         % update main CD0 with drag build-up result
-%CLmax = aeroOut.CLmax_3D;    % update main CLmax with first-pass 3D estimate
+%-------- Feed back useful outputs into main --------
+CD0   = aeroOut.CD0;         % update main CD0 with drag build-up result
+CLmax = aeroOut.CLmax_3D;    % update main CLmax with first-pass 3D estimate
 
-% fprintf('Reynolds number              = %.4e\n', aeroOut.Re);
-% fprintf('Skin-friction coeff Cf       = %.6f\n', aeroOut.Cf);
-% fprintf('CD0_wing                     = %.5f\n', aeroOut.CD0_wing);
-% fprintf('CD0_fuse                     = %.5f\n', aeroOut.CD0_fuse);
-% fprintf('CD0_fin                      = %.5f\n', aeroOut.CD0_fin);
-% fprintf('Total CD0                    = %.5f\n', aeroOut.CD0);
-% fprintf('CLalpha_2D_avg               = %.5f per deg\n', aeroOut.CLalpha_2D_avg_perDeg);
-% fprintf('CLalpha_3D                   = %.5f per deg\n', aeroOut.CLalpha_3D_perDeg);
-% fprintf('alphaL0_avg                  = %.5f deg\n', aeroOut.alphaL0_avg_deg);
-% fprintf('CLmax_2D_avg                 = %.5f\n', aeroOut.CLmax_2D_avg);
-% fprintf('CLmax_3D                     = %.5f\n', aeroOut.CLmax_3D);
-% fprintf('alpha_stall estimate         = %.5f deg\n', aeroOut.alpha_stall_deg);
-% fprintf('CL_cruise                    = %.5f\n', aeroOut.CL_cruise);
-% fprintf('alpha_cruise                 = %.5f deg\n', aeroOut.alpha_cruise_deg);
-% fprintf('CD_cruise                    = %.5f\n', aeroOut.CD_cruise);
-% fprintf('L/D_cruise                   = %.5f\n', aeroOut.LD_cruise);
-% fprintf('(L/D)_max                    = %.5f\n', aeroOut.LD_max);
+fprintf('Reynolds number              = %.4e\n', aeroOut.Re);
+fprintf('Skin-friction coeff Cf       = %.6f\n', aeroOut.Cf);
+fprintf('CD0_wing                     = %.5f\n', aeroOut.CD0_wing);
+fprintf('CD0_fuse                     = %.5f\n', aeroOut.CD0_fuse);
+fprintf('CD0_fin                      = %.5f\n', aeroOut.CD0_fin);
+fprintf('Total CD0                    = %.5f\n', aeroOut.CD0);
+fprintf('CLalpha_2D_avg               = %.5f per deg\n', aeroOut.CLalpha_2D_avg_perDeg);
+fprintf('CLalpha_3D                   = %.5f per deg\n', aeroOut.CLalpha_3D_perDeg);
+fprintf('alphaL0_avg                  = %.5f deg\n', aeroOut.alphaL0_avg_deg);
+fprintf('CLmax_2D_avg                 = %.5f\n', aeroOut.CLmax_2D_avg);
+fprintf('CLmax_3D                     = %.5f\n', aeroOut.CLmax_3D);
+fprintf('alpha_stall estimate         = %.5f deg\n', aeroOut.alpha_stall_deg);
+fprintf('CL_cruise                    = %.5f\n', aeroOut.CL_cruise);
+fprintf('alpha_cruise                 = %.5f deg\n', aeroOut.alpha_cruise_deg);
+fprintf('CD_cruise                    = %.5f\n', aeroOut.CD_cruise);
+fprintf('L/D_cruise                   = %.5f\n', aeroOut.LD_cruise);
+fprintf('(L/D)_max                    = %.5f\n', aeroOut.LD_max);
 fprintf('=================================================================\n\n');
 %% ============== Aircraft Mass Properties ==================
 fprintf('\n================ Aircraft Mass Properties =================\n');
