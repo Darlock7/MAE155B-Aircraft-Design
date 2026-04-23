@@ -222,6 +222,7 @@ fprintf('-------------------------------------------------\n');
 mission.nLaps             = 3;
 mission.lapLengthTarget_m = 407.103;   % [m]
 mission.V_pattern         = V_cruise;  % [m/s]
+
 mission.h_ground          = 0;         % [m]
 mission.h_cruise          = 30;        % [m]
 
@@ -234,11 +235,11 @@ mission.n_turn            = 1.6;       % [-]
 % -------- Climb / descent design choices --------
 mission.delta_h           = delta_h;   % [m] altitude gain
 
-mission.V_climb_mps       = 14.0;      % [m/s] forward climb speed
-mission.gamma_climb_deg   = 11.0;       % [deg]
+mission.V_climb_mps       = 18.0;      % [m/s] forward climb speed
+mission.gamma_climb_deg   = 6.0;       % [deg] UPDATED (was too aggressive)
 
-mission.V_descent_mps     = 30.0;      % [m/s] forward descent speed
-mission.gamma_descent_deg = 12.0;       % [deg]
+mission.V_descent_mps     = 30.0;      % [m/s]
+mission.gamma_descent_deg = 12.0;      % [deg]
 
 % -------- Derived climb / descent quantities --------
 mission.G_climb   = sind(mission.gamma_climb_deg);      % [-]
@@ -251,8 +252,7 @@ mission.climbDistance_m   = mission.delta_h / tand(mission.gamma_climb_deg);   %
 mission.descentDistance_m = mission.h_cruise / tand(mission.gamma_descent_deg); % [m]
 
 mission.climbTime_s   = mission.delta_h / mission.climbRate_mps;    % [s]
-mission.descentTime_s = mission.h_cruise / mission.descentRate_mps; % [s]
-
+mission.descentTime_s = mission.h_cruise / mission.descentRate_mps; % [s] FIXED
 fprintf('\n================ Derived Climb / Descent Quantities ================\n');
 fprintf('Climb speed V_climb        = %.3f m/s\n', mission.V_climb_mps);
 fprintf('Climb angle gamma_climb    = %.3f deg\n', mission.gamma_climb_deg);
