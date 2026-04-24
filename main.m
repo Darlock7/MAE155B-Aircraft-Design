@@ -1426,14 +1426,16 @@ dynIn.rudder_cf        = vertIn.rudder.cf_root;
 %
 % Mac/Linux: avl352 is already in AVL/ and runs as-is
 %
-avlDir = fullfile(fileparts(mfilename('fullpath')), 'AVL');
+avlDir     = fullfile(fileparts(mfilename('fullpath')), 'AVL');
+avlExeDir  = fullfile(avlDir, 'Nimbus');
 if ispc
-    dynIn.avlExe = fullfile(avlDir, 'avl.exe');
+    dynIn.avlExe = fullfile(avlExeDir, 'avl.exe');
 else
-    dynIn.avlExe = fullfile(avlDir, 'avl352');
+    dynIn.avlExe = fullfile(avlExeDir, 'avl352');
 end
-dynIn.workDir  = avlDir;
-dynIn.plotModes = true;
+dynIn.workDir     = avlDir;
+dynIn.plotModes   = true;
+dynIn.viewGeometry = false;  % set true to open AVL geometry viewer before analysis
 
 dynOut = dynamicStabilityAVL(dynIn);
 

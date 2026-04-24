@@ -103,9 +103,10 @@ function dynOut = dynamicStabilityAVL(dynIn)
     rud_e1 = dynIn.rudder_eta_end;
     rud_cf = dynIn.rudder_cf;
 
-    avlExe  = string(dynIn.avlExe);
-    workDir = string(dynIn.workDir);
-    doPlot  = dynIn.plotModes;
+    avlExe    = string(dynIn.avlExe);
+    workDir   = string(dynIn.workDir);
+    doPlot    = dynIn.plotModes;
+    doViewGeom = isfield(dynIn,'viewGeometry') && dynIn.viewGeometry;
 
     %% ---- file paths ----
     geomFile = fullfile(workDir, "fw_dyn.avl");
@@ -127,6 +128,20 @@ function dynOut = dynamicStabilityAVL(dynIn)
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
         rud_e0, rud_e1, rud_cf);
+
+    %% ===== STEP 1b: OPTIONAL GEOMETRY VIEWER =====
+    % Launches AVL interactively (no stdin pipe) so you can use the G command.
+    % AVL opens its own window — type G at the AVL prompt to see the geometry,
+    % then QUIT when done. The analysis run below proceeds independently.
+    if doViewGeom
+        fprintf('\n--- Opening AVL geometry viewer (type G at prompt, QUIT when done) ---\n');
+        if ispc
+            system(sprintf('start "" "%s"', avlExe));
+        else
+            system(sprintf('"%s" "%s" &', avlExe, geomFile));
+        end
+        input('Press Enter once you have closed the AVL viewer to continue...');
+    end
 
     %% ===== STEP 2: WRITE MASS FILE (SI) =====
     Ixx = Icg(1,1);  Iyy = Icg(2,2);  Izz = Icg(3,3);
