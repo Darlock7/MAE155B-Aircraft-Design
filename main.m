@@ -1426,8 +1426,8 @@ else
     dynIn.avlExe = fullfile(avlExeDir, 'avl352');
 end
 dynIn.workDir     = avlDir;
-dynIn.plotModes   = true;
-dynIn.viewGeometry = true;  % set true to open AVL geometry viewer before analysis
+dynIn.plotModes    = showPlots;
+dynIn.viewGeometry = false;  % set true manually to inspect geometry, never during optimization
 
 dynOut = dynamicStabilityAVL(dynIn);
 

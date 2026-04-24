@@ -469,6 +469,11 @@ fclose(fid);
     dynOut.Jxz         = Jxz;
     dynOut.qbar_Pa     = qbar;
     dynOut.stFile      = stFile;
+
+    % Static margin and neutral point (positive SM = stable)
+    dynOut.SM_frac     = -derivs.Cma / derivs.CLa;           % [-] fraction of MAC
+    dynOut.SM_pct      = dynOut.SM_frac * 100;                % [%MAC]
+    dynOut.Xnp_m       = cg(1) - dynOut.SM_frac * Cref;      % [m]
 end
 
 %% ========================================================================
