@@ -1422,7 +1422,7 @@ else
 end
 dynIn.workDir     = avlDir;
 dynIn.plotModes   = true;
-dynIn.viewGeometry = true;  % set true to open AVL geometry viewer before analysis
+dynIn.viewGeometry = false;  % set true to open AVL geometry viewer before analysis
 
 dynOut = dynamicStabilityAVL(dynIn);
 
