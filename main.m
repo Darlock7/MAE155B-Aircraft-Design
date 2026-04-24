@@ -1390,15 +1390,18 @@ dynIn.CD0           = aeroOut.CD0;
 dynIn.CL_trim       = aeroOut.CL_cruise;
 dynIn.alpha_trim_deg = aeroOut.alpha_cruise_deg;
 
-% Vertical fin geometry (root = wing tip, top = fin tip)
-dynIn.xLE_root_v_m  = vertOut.xLE_root_v_m;
-dynIn.y_root_v_m    = vertOut.y_root_v_m;
-dynIn.z_root_v_m    = vertOut.z_root_v_m;
-dynIn.xLE_top_v_m   = vertOut.xLE_top_v_m;
-dynIn.y_top_v_m     = vertOut.y_top_v_m;
-dynIn.z_top_v_m     = vertOut.z_top_v_m;
-dynIn.c_root_v_m    = c_root_v;
-dynIn.c_tip_v_m     = c_tip_v;
+% Vertical fin geometry (root = wing tip, top and bottom tips)
+dynIn.xLE_root_v_m    = vertOut.xLE_root_v_m;
+dynIn.y_root_v_m      = vertOut.y_root_v_m;
+dynIn.z_root_v_m      = vertOut.z_root_v_m;
+dynIn.xLE_top_v_m     = vertOut.xLE_top_v_m;
+dynIn.y_top_v_m       = vertOut.y_top_v_m;
+dynIn.z_top_v_m       = vertOut.z_top_v_m;
+dynIn.xLE_bottom_v_m  = vertOut.xLE_bottom_v_m;
+dynIn.y_bottom_v_m    = vertOut.y_bottom_v_m;
+dynIn.z_bottom_v_m    = vertOut.z_bottom_v_m;
+dynIn.c_root_v_m      = c_root_v;
+dynIn.c_tip_v_m       = c_tip_v;
 
 % Rudder
 dynIn.rudder_eta_start = vertIn.rudder.eta_start;

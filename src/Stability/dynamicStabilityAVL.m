@@ -92,6 +92,9 @@ function dynOut = dynamicStabilityAVL(dynIn)
     xLE_tv = dynIn.xLE_top_v_m;
     y_tv   = dynIn.y_top_v_m;
     z_tv   = dynIn.z_top_v_m;
+    xLE_bv = dynIn.xLE_bottom_v_m;
+    y_bv   = dynIn.y_bottom_v_m;
+    z_bv   = dynIn.z_bottom_v_m;
     c_rv   = dynIn.c_root_v_m;
     c_tv   = dynIn.c_tip_v_m;
     rud_e0 = dynIn.rudder_eta_start;
@@ -118,7 +121,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
     write_geom(geomFile, cg, Sref, Cref, Bref, Mach, ...
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, alphaL0_deg, ...
         eta0, eta1, cf, ...
-        xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, c_rv, c_tv, ...
+        xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
+        xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
         rud_e0, rud_e1, rud_cf);
 
     %% ===== STEP 2: WRITE MASS FILE (SI) =====
@@ -442,7 +446,8 @@ end
 function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, alphaL0_deg, ...
         eta0, eta1, cf, ...
-        xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, c_rv, c_tv, ...
+        xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
+        xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
         rud_e0, rud_e1, rud_cf)
 
     Xcg = cg(1);  Ycg = cg(2);  Zcg = cg(3);
@@ -478,12 +483,12 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     % Fin geometry via eta (0=root, 1=top tip)
     % Fin root = wing tip, fin top = vertOut top
-    % For right fin: y increases toward fin tip, z increases (vertical up)
-    % We model root → top only (topFrac = 0.66 dominates stabilizing area)
+    % For right fin: modeled in two SURFACE blocks joined at the root
+    %   Above wing: root → top    (z positive, topFrac of span)
+    %   Below wing: root → bottom (z negative, (1-topFrac) of span)
+    % Rudder spans the above-wing portion only (typical for winglet-style fins)
 
-    %fin_b = sqrt((y_tv - y_rv)^2 + (z_tv - z_rv)^2);  % fin span length
-
-    % rudder hinge stations
+    % Above-wing rudder hinge stations (interpolate root → top)
     y_rud0_R = y_rv + rud_e0*(y_tv - y_rv);
     z_rud0_R = z_rv + rud_e0*(z_tv - z_rv);
     x_rud0_R = xLE_rv + rud_e0*(xLE_tv - xLE_rv);
@@ -578,16 +583,15 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc);
     fprintf(fid,"NACA\n0012\n\n");
 
-    % ---- Right vertical fin ----
+    % ---- Right vertical fin — above wing ----
     fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! RIGHT VERTICAL FIN  (root at wing tip, extends upward)\n");
+    fprintf(fid,"! RIGHT FIN ABOVE WING  (root → top, z positive)\n");
     fprintf(fid,"! Airfoil: NACA 0010 (symmetric)\n");
-    fprintf(fid,"! Rudder spans eta = %.2f to %.2f of fin height\n", rud_e0, rud_e1);
-    fprintf(fid,"! SgnDup = +1 (no mirror -- each fin written separately)\n");
+    fprintf(fid,"! Rudder spans eta = %.2f to %.2f of above-wing height\n", rud_e0, rud_e1);
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_R\n");
-    fprintf(fid,"8 1.0  12 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
+    fprintf(fid,"Vfin_R_top\n");
+    fprintf(fid,"8 1.0  10 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
 
     fprintf(fid,"! --- Fin root (= wing tip) ---\n");
     fprintf(fid,"! Xle[m]      Yle[m]      Zle[m]      Chord[m]    AInc[deg]\n");
@@ -608,21 +612,39 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! name    gain   Xhinge   hVec(x y z)   SgnDup\n");
     fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    fprintf(fid,"! --- Fin tip ---\n");
+    fprintf(fid,"! --- Fin top tip ---\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_tv, y_tv, z_tv, c_tv);
     fprintf(fid,"NACA\n0010\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    % ---- Left vertical fin ----
+    % ---- Right vertical fin — below wing ----
     fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! LEFT VERTICAL FIN  (mirror of right fin, Y negated)\n");
-    fprintf(fid,"! rudder gain = -1 so both rudders deflect in same direction\n");
+    fprintf(fid,"! RIGHT FIN BELOW WING  (root → bottom tip, z negative)\n");
+    fprintf(fid,"! No rudder on below-wing portion\n");
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_L\n");
-    fprintf(fid,"8 1.0  12 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
+    fprintf(fid,"Vfin_R_bot\n");
+    fprintf(fid,"8 1.0  6 1.0               ! Nchord  Cspace  Nspan  Sspace\n\n");
+
+    fprintf(fid,"! --- Fin root (= wing tip) ---\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, y_rv, z_rv, c_rv);
+    fprintf(fid,"NACA\n0010\n\n");
+
+    fprintf(fid,"! --- Fin bottom tip ---\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, y_bv, z_bv, c_tv);
+    fprintf(fid,"NACA\n0010\n\n");
+
+    % ---- Left vertical fin — above wing ----
+    fprintf(fid,"! ============================================================\n");
+    fprintf(fid,"! LEFT FIN ABOVE WING  (Y negated; rudder gain = -1)\n");
+    fprintf(fid,"! ============================================================\n");
+    fprintf(fid,"SURFACE\n");
+    fprintf(fid,"Vfin_L_top\n");
+    fprintf(fid,"8 1.0  10 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
 
     fprintf(fid,"! --- Fin root ---\n");
     fprintf(fid,"SECTION\n");
@@ -641,12 +663,30 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    fprintf(fid,"! --- Fin tip ---\n");
+    fprintf(fid,"! --- Fin top tip ---\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_tv, -y_tv, z_tv, c_tv);
     fprintf(fid,"NACA\n0010\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
+
+    % ---- Left vertical fin — below wing ----
+    fprintf(fid,"! ============================================================\n");
+    fprintf(fid,"! LEFT FIN BELOW WING  (Y negated; no rudder)\n");
+    fprintf(fid,"! ============================================================\n");
+    fprintf(fid,"SURFACE\n");
+    fprintf(fid,"Vfin_L_bot\n");
+    fprintf(fid,"8 1.0  6 1.0               ! Nchord  Cspace  Nspan  Sspace\n\n");
+
+    fprintf(fid,"! --- Fin root ---\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, -y_rv, z_rv, c_rv);
+    fprintf(fid,"NACA\n0010\n\n");
+
+    fprintf(fid,"! --- Fin bottom tip ---\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, -y_bv, z_bv, c_tv);
+    fprintf(fid,"NACA\n0010\n\n");
 
     fclose(fid);
 end
