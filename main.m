@@ -925,14 +925,14 @@ comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 % ---- Main propulsion ----
 comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
-comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.25,  0.000,  0.000]);
+comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.40, 0.000, -0.01750000/2]);
-comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.47, 0.000, 0.000]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.50, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.35, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3470, 0.000, -0.01750000/2]);
 
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
@@ -957,7 +957,7 @@ comp(end+1) = makePointMass('S4 Servo vertical stabilizer', 0.009, ...
      vertOut.z_root_v_m + 0.20*vertOut.b_v_m]);
 
 % ---- Cargo bay servo ----
-comp(end+1) = makePointMass('S5 Servo cargo bay', 0.009, [0.13, 0.000, 0.000]);
+comp(end+1) = makePointMass('S5 Servo cargo bay', 0.009, [0.61980000, 0.000, 0.000]);
 
 % -------------------------------------------------------------------------
 % Wing / vertical structure lumped masses
