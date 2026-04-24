@@ -47,7 +47,7 @@ fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timesta
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
 
-showPlots = false;   % set false to suppress all figures
+showPlots = true;   % set false to suppress all figures
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
 
 %%            ================ User Input ==================

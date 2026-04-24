@@ -433,25 +433,25 @@ fclose(fid);
         sysLong = ss(Along, zeros(4,1), eye(4), zeros(4,1));
         sysLat  = ss(Alat,  zeros(4,1), eye(4), zeros(4,1));
     
-        plot_mode(sysLong, linspace(0,10,2001), ...
+        plot_mode(sysLong, linspace(0,2,500), ...
             longModes.shortPeriod.vec, longModes.shortPeriod.lambda, ...
-            ["du","w","q","dtheta"], "Short Period", true);
-    
+            ["du","w","q","dtheta"], "Short Period", longModes.shortPeriod.metrics.isComplex);
+
         plot_mode(sysLong, linspace(0,120,6001), ...
             longModes.phugoid.vec, longModes.phugoid.lambda, ...
-            ["du","w","q","dtheta"], "Phugoid", false);
+            ["du","w","q","dtheta"], "Phugoid", longModes.phugoid.metrics.isComplex);
     
         plot_mode(sysLat, linspace(0,30,3001), ...
             latModes.dutchRoll.vec, latModes.dutchRoll.lambda, ...
-            ["v","p","r","phi"], "Dutch Roll", true);
-    
+            ["v","p","r","phi"], "Dutch Roll", latModes.dutchRoll.metrics.isComplex);
+
         plot_mode(sysLat, linspace(0,8,1601), ...
             latModes.rollSubsidence.vec, latModes.rollSubsidence.lambda, ...
-            ["v","p","r","phi"], "Roll Subsidence", false);
-    
+            ["v","p","r","phi"], "Roll Subsidence", latModes.rollSubsidence.metrics.isComplex);
+
         plot_mode(sysLat, linspace(0,60,3001), ...
             latModes.spiral.vec, latModes.spiral.lambda, ...
-            ["v","p","r","phi"], "Spiral", false);
+            ["v","p","r","phi"], "Spiral", latModes.spiral.metrics.isComplex);
     
         drawnow;
     end
@@ -750,7 +750,8 @@ function lm = classify_long_modes(lam, evecs)
 
     lm.allEigenvalues = lam;
 
-    if numel(idxC) >= 2
+    if numel(idxC) >= 4
+        % Normal case: two complex pairs — short period (fast) and phugoid (slow)
         lamC = lam(idxC);
         vecC = evecs(:, idxC);
         [~, ord] = sort(abs(imag(lamC)), 'descend');
@@ -762,11 +763,27 @@ function lm = classify_long_modes(lam, evecs)
         lm.phugoid.lambda  = lamC(ord(end));
         lm.phugoid.vec     = vecC(:, ord(end));
         lm.phugoid.metrics = mode_metrics(lamC(ord(end)));
+
+    elseif numel(idxC) == 2 && numel(idxR) >= 2
+        % Statically unstable: short period split into two real roots + phugoid complex pair
+        % Complex pair → phugoid; fastest real root (largest |λ|) → short period
+        warning('dynamicStabilityAVL: short period split into real roots (static instability). Assigning complex pair to phugoid, fastest real root to short period.');
+
+        lamC = lam(idxC);  vecC = evecs(:, idxC);
+        lm.phugoid.lambda  = lamC(1);   % take positive-imaginary member
+        lm.phugoid.vec     = vecC(:,1);
+        lm.phugoid.metrics = mode_metrics(lamC(1));
+
+        lamR = lam(idxR);  vecR = evecs(:, idxR);
+        [~, ord] = sort(real(lamR), 'descend');  % most unstable (largest real part) first
+        lm.shortPeriod.lambda  = lamR(ord(1));
+        lm.shortPeriod.vec     = vecR(:, ord(1));
+        lm.shortPeriod.metrics = mode_metrics(lamR(ord(1)));
+
     else
-        warning('dynamicStabilityAVL: longitudinal modes are not two clean complex pairs. Classifying by eigenvalue magnitude.');
-
+        % Fallback: all real or unexpected mix — sort by magnitude
+        warning('dynamicStabilityAVL: unexpected eigenvalue structure. Classifying by magnitude.');
         [~, ord] = sort(abs(lam), 'descend');
-
         lm.shortPeriod.lambda  = lam(ord(1));
         lm.shortPeriod.vec     = evecs(:, ord(1));
         lm.shortPeriod.metrics = mode_metrics(lam(ord(1)));
@@ -900,13 +917,22 @@ end
 %% ========================================================================
 %  MODE RESPONSE PLOTTER
 %% ========================================================================
-function plot_mode(sys, t, vec, lam, stateNames, modeName, isComplex)
-    x0 = real(vec);
-    if norm(x0) < 1e-10, x0 = imag(vec); end
-    if norm(x0) < 1e-10, x0 = ones(length(vec),1); end
-    x0 = x0 / norm(x0);
-
-    [y, tt] = initial(sys, x0, t);
+function plot_mode(~, t, vec, lam, stateNames, modeName, isComplex)
+    % Compute isolated modal response directly from eigenvalue — avoids
+    % polluting the plot with other modes when the full system is unstable.
+    if isreal(lam)
+        x0 = real(vec);
+        if norm(x0) < 1e-10, x0 = ones(length(vec),1); end
+        x0 = x0 / norm(x0);
+        y  = (x0 * exp(real(lam) * t))';   % [nt x n]
+    else
+        % Complex pair: y(t) = 2*real(v * exp(λt)), scaled to unit peak
+        raw = 2 * real(vec * exp(lam * t)); % [n x nt]
+        pk  = max(abs(raw(:)));
+        if pk < 1e-12, pk = 1; end
+        y   = (raw / pk)';                  % [nt x n]
+    end
+    tt = t(:);
 
     figure('Color','w','Name', modeName);
     plot(tt, y, 'LineWidth', 1.25);
