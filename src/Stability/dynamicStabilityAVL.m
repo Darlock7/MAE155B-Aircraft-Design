@@ -23,7 +23,10 @@ function dynOut = dynamicStabilityAVL(dynIn)
 %   .eta_cs_start     elevon inboard eta [-]
 %   .eta_cs_end       elevon outboard eta [-]
 %   .cs_chord_frac    elevon chord fraction [-]
-%   .alphaL0_avg_deg  mean zero-lift angle of attack [deg]
+%   .alphaL0_root_deg root zero-lift angle of attack [deg]
+%   .alphaL0_tip_deg  tip zero-lift angle of attack [deg]
+%   .Cla_root_per_deg root 2D lift curve slope [1/deg]
+%   .Cla_tip_per_deg  tip 2D lift curve slope [1/deg]
 %   .V_mps            trim speed [m/s]
 %   .rho_kgm3         air density [kg/m^3]
 %   .CD0              zero-lift drag coefficient [-]
@@ -79,7 +82,10 @@ function dynOut = dynamicStabilityAVL(dynIn)
     eta1   = dynIn.eta_cs_end;
     cf     = dynIn.cs_chord_frac;
 
-    alphaL0_deg    = dynIn.alphaL0_avg_deg;
+    alphaL0_root_deg = dynIn.alphaL0_root_deg;
+    alphaL0_tip_deg  = dynIn.alphaL0_tip_deg;
+    Cla_root_per_deg = dynIn.Cla_root_per_deg;
+    Cla_tip_per_deg  = dynIn.Cla_tip_per_deg;
     twist_root_deg = dynIn.twist_root_deg;
     twist_tip_deg  = dynIn.twist_tip_deg;
     u0     = dynIn.V_mps;
@@ -123,7 +129,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
 
     write_geom(geomFile, cg, Sref, Cref, Bref, Mach, ...
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
-        alphaL0_deg, twist_root_deg, twist_tip_deg, ...
+        alphaL0_root_deg, alphaL0_tip_deg, twist_root_deg, twist_tip_deg, ...
+        Cla_root_per_deg, Cla_tip_per_deg, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
@@ -469,7 +476,8 @@ end
 %% ========================================================================
 function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
-        alphaL0_deg, twist_root_deg, twist_tip_deg, ...
+        alphaL0_root_deg, alphaL0_tip_deg, twist_root_deg, twist_tip_deg, ...
+        Cla_root_per_deg, Cla_tip_per_deg, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
@@ -526,15 +534,22 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     xh_rud = 1.0 - rud_cf;
 
-    % AInc per section = geometric twist at that station - alphaL0
-    % AVL: alpha_section = alpha_freestream + AInc
-    % Twist is nose-down (washout) toward tip, so twist_tip < twist_root.
-    % alphaL0 is negative for positive camber (e.g. -1.314 deg), so -alphaL0 > 0.
-    twist_lerp = @(eta) twist_root_deg + eta*(twist_tip_deg - twist_root_deg);
-    AInc0 = twist_lerp(0)    - alphaL0_deg;   % root
-    AInc1 = twist_lerp(eta0) - alphaL0_deg;   % elevon inboard edge
-    AInc2 = twist_lerp(eta1) - alphaL0_deg;   % elevon outboard edge
-    AInc3 = twist_lerp(1.0)  - alphaL0_deg;   % tip
+    % AInc(eta) = twist_geo(eta) - alphaL0(eta)
+    % Both geometric twist and zero-lift angle vary root→tip.
+    twist_lerp   = @(eta) twist_root_deg    + eta*(twist_tip_deg    - twist_root_deg);
+    alphaL0_lerp = @(eta) alphaL0_root_deg  + eta*(alphaL0_tip_deg  - alphaL0_root_deg);
+    AInc0 = twist_lerp(0)    - alphaL0_lerp(0);    % root
+    AInc1 = twist_lerp(eta0) - alphaL0_lerp(eta0); % elevon inboard edge
+    AInc2 = twist_lerp(eta1) - alphaL0_lerp(eta1); % elevon outboard edge
+    AInc3 = twist_lerp(1.0)  - alphaL0_lerp(1.0);  % tip
+
+    % CLAF: actual 2D lift curve slope [/rad] for each section (AVL default = 2pi)
+    deg2rad = pi/180;
+    Cla_lerp_rad = @(eta) (Cla_root_per_deg + eta*(Cla_tip_per_deg - Cla_root_per_deg)) / deg2rad;
+    Claf0 = Cla_lerp_rad(0);
+    Claf1 = Cla_lerp_rad(eta0);
+    Claf2 = Cla_lerp_rad(eta1);
+    Claf3 = Cla_lerp_rad(1.0);
 
     fid = fopen(fname,'w');
     assert(fid > 0, 'dynamicStabilityAVL: cannot write geometry file');
@@ -549,6 +564,26 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   ! Xref Yref Zref (CG)\n", Xcg, Ycg, Zcg);
     fprintf(fid,"0.0\n\n");
 
+    % Centerbody (CAD dimensions; 4th section closes gap to wing root)
+    % Centerbody uses AInc0 (root value) throughout: same camber/twist as wing root
+    fprintf(fid,"! CENTERBODY  NACA0012  AInc=%.4f deg (matches wing root)\n", AInc0);
+    fprintf(fid,"SURFACE\nCenterbody\n");
+    fprintf(fid,"10 1.0  8 1.0\n");
+    fprintf(fid,"YDUPLICATE\n0.0\n\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  0.000000   0.000000   0.000000   0.519900   %.6f\n", AInc0);
+    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  0.041000   0.070000   0.000000   0.478912   %.6f\n", AInc0);
+    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+    fprintf(fid,"! blend to wing root\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
+    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+
     % Wing (right half; YDUPLICATE mirrors to left)
     fprintf(fid,"! WING  NACA0012  elevons eta=%.2f-%.2f\n", eta0, eta1);
     fprintf(fid,"SURFACE\nWing\n");
@@ -557,12 +592,14 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
-    fprintf(fid,"NACA\n0012\n\n");
+    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
 
     fprintf(fid,"! elevon starts\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, AInc1);
     fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n", Claf1);
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0\n", xh_elev);
     fprintf(fid,"CONTROL\n");
@@ -572,6 +609,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, AInc2);
     fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n", Claf2);
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0\n", xh_elev);
     fprintf(fid,"CONTROL\n");
@@ -579,7 +617,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc3);
-    fprintf(fid,"NACA\n0012\n\n");
+    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"CLAF\n%.4f\n\n", Claf3);
 
     % Right fin  (bottom tip → root → top tip)
     fprintf(fid,"! VFIN_R  NACA0010  bottom-tip→root→top-tip  rudder eta=%.2f-%.2f\n", rud_e0, rud_e1);

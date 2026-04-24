@@ -1367,8 +1367,13 @@ dynIn.eta_cs_start  = wingIn.eta_cs_start;
 dynIn.eta_cs_end    = wingIn.eta_cs_end;
 dynIn.cs_chord_frac = wingIn.cs_chord_frac;
 
-% Airfoil zero-lift angle (used as AINC in AVL to set correct camber line)
-dynIn.alphaL0_avg_deg = aeroOut.alphaL0_avg_deg;
+% Airfoil zero-lift angle root/tip (spanwise-interpolated in AInc formula)
+dynIn.alphaL0_root_deg = airfoilOut.root.alphaL0_deg;
+dynIn.alphaL0_tip_deg  = airfoilOut.tip.alphaL0_deg;
+
+% Airfoil lift curve slope root/tip (spanwise-interpolated CLAF in AVL)
+dynIn.Cla_root_per_deg = airfoilOut.root.Cla_per_deg;
+dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 
 % Flight condition
 dynIn.V_mps         = V_cruise;
