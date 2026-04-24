@@ -192,7 +192,6 @@ fprintf('Baseline Empty Wt Fraction (fe)            = %.4f\n', fe);
 fprintf('Effective Empty Wt Frac.   (fe_eff)        = %.4f\n', fe_eff);
 fprintf('Baseline L/D               (LD)            = %.4f\n', LD);
 fprintf('Effective L/D              (LD_eff)        = %.4f\n', LD_eff);
-fprintf('Aero penalty factor        (kd)            = %.4f\n', kd);
 fprintf('Empty-weight penalty       (ke)            = %.4f\n', ke);
 fprintf('Derived Empty Weight       (We)            = %.4f N\n', We);
 fprintf('Derived Gross Weight       (Wg)            = %.4f N\n', Wg);
