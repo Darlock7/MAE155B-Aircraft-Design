@@ -1,0 +1,924 @@
+%% ============================================================
+%  JAGER_AVL_AUTORUN_HANDLINGQUALITIES_V4.m
+%
+%  PURPOSE:
+%   1) Write jager geometry / mass / run files
+%   2) Write AVL batch input file
+%   3) Run AVL automatically from MATLAB
+%   4) Export ST file automatically
+%   5) Parse ST file and build:
+%         - Longitudinal state matrix
+%         - Lateral state matrix
+%   6) Identify and label the canonical modes:
+%         - Short period
+%         - Phugoid
+%         - Dutch roll
+%         - Roll subsidence
+%         - Spiral mode
+%   7) Plot only those canonical mode responses
+%   8) Compute handling-quality metrics for longitudinal and lateral modes
+%
+%  NOTES:
+%   - Geometry file uses AVL geometry coordinates (X forward, Y right, Z up)
+%   - AVL output forces/moments may be reported in standard axes with Z down
+%   - This script keeps the analysis focused on state matrices + handling quality
+% ============================================================
+
+clear; clc; close all;
+
+%% =========================
+% 0) FILENAMES / PATHS
+% =========================
+avlExe   = "avl352";
+geomFile = "jager.geo.avl";
+massFile = "jager.mass";
+caseFile = "jager.run";
+stFile   = "jager_st.txt";
+cmdFile  = "jager_avl_commands.txt";
+
+geomLoadName = geomFile;
+
+% Optional figure export
+saveFigs = false;
+figDir   = "figures_V4";
+if saveFigs && ~exist(figDir,'dir')
+    mkdir(figDir);
+end
+
+%% =========================
+% 1) GLOBAL CONSTANTS / UNITS
+% =========================
+g_ft = 32.174;          % [ft/s^2]
+Mach = 0.00;
+CDp  = 0.02813;
+
+%% =========================
+% 2) AIRCRAFT WEIGHT / CG / INERTIA
+% =========================
+W_lbf  = 55;
+m_slug = W_lbf/g_ft;
+
+% Geometry file uses AVL geometry coordinates (Z up).
+% Use the CG in the same coordinate system as the geometry.
+Xcg_in = 39.1;         % [in]
+Ycg_ft = 0.0;           % [ft]
+Zcg_ft = -1.74/12;      % [ft] negative means below z=0 plane in AVL geometry coordinates
+
+Xcg_ft = Xcg_in/12;
+
+% SolidWorks principal moments [lbm*ft^2]
+Ixx_sw =  75.7671;
+Iyy_sw = 119.6108;
+Izz_sw =  191.5794;
+
+% Convert lbm*ft^2 → slug*ft^2
+convI = 1/32.174;
+
+Ixx = Ixx_sw * convI;
+Iyy = Iyy_sw * convI;
+Izz = Izz_sw * convI;
+
+% principal axes assumption
+Ixy = 0;
+Ixz = 0;
+Iyz = 0;
+
+%% =========================
+% 3) AERODYNAMIC REFERENCE GEOMETRY
+% =========================
+Sref = 6.64;      % [ft^2]
+Cref = 1.052;     % [ft]
+Bref = 6.31;      % [ft]
+b2   = Bref/2;
+
+Xref = Xcg_ft;
+Yref = 0.0;
+Zref = Zcg_ft;
+
+%% =========================
+% 4) CAD DATUM LOCATIONS
+% =========================
+XwingLE_in = 35;
+XwingLE    = XwingLE_in/12;
+
+%% =========================
+% 5) STATIC MARGIN INPUTS
+% =========================
+xNP_in = 41.49;       % [in]
+MAC_in = Cref*12;     % [in]
+SM_frac = (xNP_in - Xcg_in)/MAC_in;
+SM_pct  = 100*SM_frac;
+
+%% =========================
+% 6) WING GEOMETRY + AILERON REGION
+% =========================
+c_w = Cref;
+
+eta_a0 = 0.60;
+y_a0   = eta_a0*b2;
+y_tip  = 1.00*b2;
+
+wing_airfoil_type = "NACA";
+wing_naca         = "4412";
+
+Xhinge_ail     = 0.75;
+aileron_gain   = 1.0;
+aileron_SgnDup = -1.0;
+
+%% =========================
+% 7) V-TAIL GEOMETRY + RUDDERVATOR REGION
+% =========================
+S_panel      = 0.809;     % [ft^2] each panel area
+AR_tail      = 2.8;      % [-]
+taper_vt     = 0.4;      % c_tip / c_root
+gamma_deg    = 36.38;     % [deg] dihedral from horizontal
+LambdaLE_deg = 45;      % [deg] LE sweep in top view
+XtailQC      = 80.3636/12;     % [ft] root quarter-chord from nose
+
+b_panel   = sqrt(AR_tail*S_panel);
+c_root_vt = 2*S_panel/(b_panel*(1+taper_vt));
+c_tip_vt  = taper_vt*c_root_vt;
+
+XtailLE_root = XtailQC - 0.25*c_root_vt;
+
+yT = b_panel*cosd(gamma_deg);
+zT = b_panel*sind(gamma_deg);
+
+eta_rv0 = 0.30;
+
+vtail_airfoil_type = "NACA";
+vtail_naca         = "0010";
+
+Xhinge_rv    = 0.70;
+rudderv_gain = 1.0;
+
+%% =========================
+% 7B) OPTIONAL VENTRAL FIN
+% =========================
+use_ventral_fin = false;
+
+S_ventral      = 0.10;    % [ft^2]
+AR_ventral     = 1.80;    % [-]
+taper_ventral  = 0.70;    % c_tip/c_root
+LambdaVF_deg   = 20.0;    % [deg]
+Xvf_rootLE     = XtailLE_root + 0.15;
+Yvf_root       = 0.0;
+Zvf_root       = 0.0;     % [ft], centerline / fuselage ref
+ventral_airfoil_type = "NACA";
+ventral_naca         = vtail_naca;
+
+b_vf      = sqrt(AR_ventral * S_ventral);
+c_root_vf = 2*S_ventral / (b_vf*(1+taper_ventral));
+c_tip_vf  = taper_ventral * c_root_vf;
+
+xvf_tip = Xvf_rootLE + b_vf*tand(LambdaVF_deg);
+yvf_tip = 0.0;
+zvf_tip = Zvf_root - b_vf;   % AVL geometry uses Z up, so ventral fin is negative z
+
+%% =========================
+% 8) FLIGHT CONDITION
+% =========================
+V_ftps    = 75.0;
+alpha_deg = 8.25;
+beta_deg  = 0.0;
+
+%% ============================================================
+% WRITE 1) GEOMETRY FILE
+% ============================================================
+fid = fopen(geomFile,'w');
+assert(fid>0, "Could not write geometry file.");
+
+fprintf(fid,"JAGER Geometry V4 (generated by MATLAB)\n");
+fprintf(fid,"%.4f\n", Mach);
+fprintf(fid,"0 0 0.0\n");
+fprintf(fid,"%.4f %.4f %.4f\n", Sref, Cref, Bref);
+fprintf(fid,"%.4f %.4f %.4f\n", Xref, Yref, Zref);
+fprintf(fid,"%.6f\n\n", CDp);
+
+% ---------------- Wing ----------------
+fprintf(fid,"SURFACE\nWing\n");
+fprintf(fid,"10 1.0 24 1.0\n");
+fprintf(fid,"YDUPLICATE\n0.0\n\n");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f 0.0000 0.0000 %.4f 0.0000\n", XwingLE, c_w);
+write_airfoil(fid, wing_airfoil_type, wing_naca, "");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f 0.0000 %.4f 0.0000\n", XwingLE, y_a0, c_w);
+write_airfoil(fid, wing_airfoil_type, wing_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"aileron %.3f %.3f 0 0 0 %.1f\n\n", ...
+    aileron_gain, Xhinge_ail, aileron_SgnDup);
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f 0.0000 %.4f 0.0000\n", XwingLE, y_tip, c_w);
+write_airfoil(fid, wing_airfoil_type, wing_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"aileron %.3f %.3f 0 0 0 %.1f\n\n", ...
+    aileron_gain, Xhinge_ail, aileron_SgnDup);
+
+% ---------------- V-tail shared stations ----------------
+eta0 = 0.0;
+eta1 = eta_rv0;
+eta2 = 1.0;
+
+y0p = eta0*abs(yT); z0 = eta0*zT;
+y1p = eta1*abs(yT); z1 = eta1*zT;
+y2p = eta2*abs(yT); z2 = eta2*zT;
+
+c0 = c_root_vt + (c_tip_vt - c_root_vt)*eta0;
+c1 = c_root_vt + (c_tip_vt - c_root_vt)*eta1;
+c2 = c_root_vt + (c_tip_vt - c_root_vt)*eta2;
+
+x0 = XtailLE_root + y0p*tand(LambdaLE_deg);
+x1 = XtailLE_root + y1p*tand(LambdaLE_deg);
+x2 = XtailLE_root + y2p*tand(LambdaLE_deg);
+
+% ---------------- Vtail Right ----------------
+fprintf(fid,"SURFACE\nVtail_R\n");
+fprintf(fid,"8 1.0 16 1.0\n\n");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x0, +y0p, z0, c0);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x1, +y1p, z1, c1);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"rudderv %.3f %.3f 0 0 0 1.0\n\n", rudderv_gain, Xhinge_rv);
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x2, +y2p, z2, c2);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"rudderv %.3f %.3f 0 0 0 1.0\n\n", rudderv_gain, Xhinge_rv);
+
+% ---------------- Vtail Left ----------------
+fprintf(fid,"SURFACE\nVtail_L\n");
+fprintf(fid,"8 1.0 16 1.0\n\n");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x0, -y0p, z0, c0);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x1, -y1p, z1, c1);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"rudderv %.3f %.3f 0 0 0 1.0\n\n", rudderv_gain, Xhinge_rv);
+
+fprintf(fid,"SECTION\n");
+fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", x2, -y2p, z2, c2);
+write_airfoil(fid, vtail_airfoil_type, vtail_naca, "");
+fprintf(fid,"CONTROL\n");
+fprintf(fid,"rudderv %.3f %.3f 0 0 0 1.0\n\n", rudderv_gain, Xhinge_rv);
+
+% ---------------- Ventral Fin ----------------
+if use_ventral_fin
+    fprintf(fid,"SURFACE\nVentral_Fin\n");
+    fprintf(fid,"6 1.0 12 1.0\n\n");
+
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", ...
+        Xvf_rootLE, Yvf_root, Zvf_root, c_root_vf);
+    write_airfoil(fid, ventral_airfoil_type, ventral_naca, "");
+
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"%.4f %.4f %.4f %.4f 0.0000\n", ...
+        xvf_tip, yvf_tip, zvf_tip, c_tip_vf);
+    write_airfoil(fid, ventral_airfoil_type, ventral_naca, "");
+end
+
+fclose(fid);
+
+%% ============================================================
+% WRITE 2) MASS FILE
+% ============================================================
+fid = fopen(massFile,'w');
+assert(fid>0, "Could not write mass file.");
+
+fprintf(fid,"# Jager mass file (generated by MATLAB)\n");
+fprintf(fid,"# mass  x  y  z  Ixx  Iyy  Izz  Ixz  Ixy  Iyz\n");
+fprintf(fid,"# mass units: slug\n");
+fprintf(fid,"# length units: ft\n");
+fprintf(fid,"# inertia units: slug*ft^2\n");
+fprintf(fid,"%.6f  %.6f  %.6f  %.6f  %.6f  %.6f  %.6f  %.6f  %.6f  %.6f\n", ...
+    m_slug, Xcg_ft, Ycg_ft, Zcg_ft, Ixx, Iyy, Izz, Ixz, Ixy, Iyz);
+
+fclose(fid);
+
+%% ============================================================
+% WRITE 3) RUN CASE FILE
+% ============================================================
+fid = fopen(caseFile,'w');
+assert(fid>0, "Could not write run-case file.");
+
+fprintf(fid,"# Jager run case\n");
+fprintf(fid,"# alpha[deg]  beta[deg]  V[ft/s]\n");
+fprintf(fid,"%.6f  %.6f  %.6f\n", alpha_deg, beta_deg, V_ftps);
+
+fclose(fid);
+
+%% ============================================================
+% WRITE 4) AVL COMMAND FILE
+% ============================================================
+if isfile(stFile)
+    delete(stFile);
+end
+
+fid = fopen(cmdFile,'w');
+assert(fid>0, "Could not write AVL command file.");
+
+fprintf(fid,"LOAD %s\n", geomLoadName);
+fprintf(fid,"MASS %s\n", massFile);
+fprintf(fid,"CASE %s\n", caseFile);
+fprintf(fid,"MSET\n");
+fprintf(fid,"0\n");
+fprintf(fid,"OPER\n");
+fprintf(fid,"A %.6f\n", alpha_deg);
+fprintf(fid,"A %.6f\n", alpha_deg);
+fprintf(fid,"X\n");
+fprintf(fid,"ST\n");
+fprintf(fid,"%s\n", stFile);
+fprintf(fid,"\n");
+fprintf(fid,"QUIT\n");
+
+fclose(fid);
+
+%% ============================================================
+% PRINT MODEL SUMMARY
+% ============================================================
+fprintf("\n================ MODEL SUMMARY ================\n");
+fprintf("CG     = (%.4f, %.4f, %.4f) ft\n", Xcg_ft, Ycg_ft, Zcg_ft);
+fprintf("Sref   = %.4f ft^2\n", Sref);
+fprintf("Cref   = %.4f ft\n", Cref);
+fprintf("Bref   = %.4f ft\n", Bref);
+fprintf("SM     = %.2f %% MAC\n", SM_pct);
+fprintf("Alpha  = %.2f deg\n", alpha_deg);
+fprintf("V      = %.2f ft/s\n", V_ftps);
+if use_ventral_fin
+    fprintf("Ventral fin enabled: S = %.4f ft^2, AR = %.3f, taper = %.3f\n", ...
+        S_ventral, AR_ventral, taper_ventral);
+else
+    fprintf("Ventral fin enabled: no\n");
+end
+
+%% ============================================================
+% RUN AVL AUTOMATICALLY
+% ============================================================
+assert(isfile(avlExe),   "AVL executable not found: %s", avlExe);
+assert(isfile(geomFile), "Geometry file missing: %s", geomFile);
+assert(isfile(massFile), "Mass file missing: %s", massFile);
+assert(isfile(caseFile), "Run case file missing: %s", caseFile);
+assert(isfile(cmdFile),  "AVL command file missing: %s", cmdFile);
+
+fprintf("\n============================================================\n");
+fprintf("RUNNING AVL AUTOMATICALLY\n");
+fprintf("Executable : %s\n", avlExe);
+fprintf("Geometry   : %s\n", geomFile);
+fprintf("Mass       : %s\n", massFile);
+fprintf("Run case   : %s\n", caseFile);
+fprintf("Commands   : %s\n", cmdFile);
+fprintf("Target ST  : %s\n", stFile);
+fprintf("============================================================\n\n");
+
+syscmd = sprintf('"%s" < "%s"', avlExe, cmdFile);
+[status, cmdout] = system(syscmd);
+
+fprintf("AVL exit status = %d\n", status);
+fprintf("------------------------------------------------------------\n");
+fprintf("%s\n", cmdout);
+fprintf("------------------------------------------------------------\n");
+
+if ~isfile(stFile)
+    error("ST output file was not created. Check AVL command flow.");
+end
+
+if status ~= 0
+    warning("AVL returned nonzero exit status (%d), but continuing because ST file exists.", status);
+end
+
+%% ============================================================
+% DYNAMICS MODEL SETUP
+% ============================================================
+g_ftps2 = 32.174;
+rho     = 0.0023769;      % [slug/ft^3], sea-level standard
+
+u0_ftps    = V_ftps;
+theta0_deg = 0.0;
+theta0_rad = deg2rad(theta0_deg);
+
+Sref_ft2 = Sref;
+Cref_ft  = Cref;
+Bref_ft  = Bref;
+
+m_slug_dyn  = m_slug;
+Ix_slugft2  = Ixx;
+Iy_slugft2  = Iyy;
+Iz_slugft2  = Izz;
+Ixz_slugft2 = Ixz;
+
+Zw_dot = 0.0;
+Mw_dot = 0.0;
+
+%% ============================================================
+% READ + PARSE ST FILE
+% ============================================================
+txt = fileread(stFile);
+get = @(pat) must_getnum(txt, pat);
+
+CL0 = get("CLtot =");
+CD0 = get("CDtot =");
+
+CLa = get("CLa =");
+CDa = get("CDa =");
+Cma = get("Cma =");
+
+CLq = get("CLq =");
+CDq = get("CDq =");
+Cmq = get("Cmq =");
+
+CYb = get("CYb =");
+Clb = get("Clb =");
+Cnb = get("Cnb =");
+
+CYp = get("CYp =");
+Clp = get("Clp =");
+Cnp = get("Cnp =");
+
+CYr = get("CYr =");
+Clr = get("Clr =");
+Cnr = get("Cnr =");
+
+fprintf("\n================ INPUT CHECK ================\n");
+fprintf("Parsed ST file: %s\n", stFile);
+fprintf("Trim totals: CL0=%.6f, CD0=%.6f\n", CL0, CD0);
+fprintf("Trim speed u0 = %.2f ft/s  |  rho = %.7f slug/ft^3\n", u0_ftps, rho);
+fprintf("CG = %.3f in | NP = %.3f in | MAC = %.3f in | SM = %.2f %%MAC\n\n", ...
+    Xcg_in, xNP_in, MAC_in, SM_pct);
+
+%% ============================================================
+% DIMENSIONALIZE DERIVATIVES
+% ============================================================
+qbar = 0.5*rho*u0_ftps^2;
+
+Xu = -rho*u0_ftps*Sref_ft2*CD0;
+Zu = -rho*u0_ftps*Sref_ft2*CL0;
+
+dX_dalpha = -qbar*Sref_ft2*CDa;
+dZ_dalpha = -qbar*Sref_ft2*CLa;
+
+Xw = (1/u0_ftps)*dX_dalpha;
+Zw = (1/u0_ftps)*dZ_dalpha;
+
+dCL_dq = CLq*(Cref_ft/(2*u0_ftps));
+dCD_dq = CDq*(Cref_ft/(2*u0_ftps));
+
+Zq = -qbar*Sref_ft2*dCL_dq;
+Xq = -qbar*Sref_ft2*dCD_dq;
+
+dM_dalpha = qbar*Sref_ft2*Cref_ft*Cma;
+Mw = (1/u0_ftps)*dM_dalpha;
+
+dCm_dq = Cmq*(Cref_ft/(2*u0_ftps));
+Mq = qbar*Sref_ft2*Cref_ft*dCm_dq;
+
+Mu = 0.0;
+
+Yv = (qbar*Sref_ft2)         * (CYb/u0_ftps);
+Lv = (qbar*Sref_ft2*Bref_ft) * (Clb/u0_ftps);
+Nv = (qbar*Sref_ft2*Bref_ft) * (Cnb/u0_ftps);
+
+Yp = (qbar*Sref_ft2)         * (CYp*(Bref_ft/(2*u0_ftps)));
+Lp = (qbar*Sref_ft2*Bref_ft) * (Clp*(Bref_ft/(2*u0_ftps)));
+Np = (qbar*Sref_ft2*Bref_ft) * (Cnp*(Bref_ft/(2*u0_ftps)));
+
+Yr = (qbar*Sref_ft2)         * (CYr*(Bref_ft/(2*u0_ftps)));
+Lr = (qbar*Sref_ft2*Bref_ft) * (Clr*(Bref_ft/(2*u0_ftps)));
+Nr = (qbar*Sref_ft2*Bref_ft) * (Cnr*(Bref_ft/(2*u0_ftps)));
+
+%% ============================================================
+% CREATE STATE MATRICES
+% ============================================================
+% Longitudinal states: [du; w; q; dtheta]
+den = (m_slug_dyn - Zw_dot);
+
+Along = zeros(4,4);
+
+Along(1,1) = Xu/m_slug_dyn;
+Along(1,2) = Xw/m_slug_dyn;
+Along(1,3) = Xq/m_slug_dyn;
+Along(1,4) = -g_ftps2*cos(theta0_rad);
+
+Along(2,1) = Zu/den;
+Along(2,2) = Zw/den;
+Along(2,3) = (Zq + m_slug_dyn*u0_ftps)/den;
+Along(2,4) = -(m_slug_dyn*g_ftps2*sin(theta0_rad))/den;
+
+Along(3,1) = (1/Iy_slugft2)*(Mu + (Mw_dot*Zu)/den);
+Along(3,2) = (1/Iy_slugft2)*(Mw + (Mw_dot*Zw)/den);
+Along(3,3) = (1/Iy_slugft2)*(Mq + (Mw_dot*(Zq + m_slug_dyn*u0_ftps))/den);
+
+Along(4,3) = 1;
+
+% Lateral states: [v; p; r; phi]
+D = (Ix_slugft2*Iz_slugft2 - Ixz_slugft2^2);
+Ix_p  = D/Iz_slugft2;
+Iz_p  = D/Ix_slugft2;
+Izx_p = Ixz_slugft2/D;
+
+Alat = zeros(4,4);
+
+Alat(1,1) = Yv/m_slug_dyn;
+Alat(1,2) = Yp/m_slug_dyn;
+Alat(1,3) = (Yr/m_slug_dyn) - u0_ftps;
+Alat(1,4) = g_ftps2*cos(theta0_rad);
+
+Alat(2,1) = (Lv/Ix_p + Izx_p*Nv);
+Alat(2,2) = (Lp/Ix_p + Izx_p*Np);
+Alat(2,3) = (Lr/Ix_p + Izx_p*Nr);
+
+Alat(3,1) = (Izx_p*Lv + Nv/Iz_p);
+Alat(3,2) = (Izx_p*Lp + Np/Iz_p);
+Alat(3,3) = (Izx_p*Lr + Nr/Iz_p);
+
+Alat(4,2) = 1;
+Alat(4,3) = tan(theta0_rad);
+
+%% ============================================================
+% PRINT STATE MATRICES
+% ============================================================
+fprintf("\n================ LONGITUDINAL STATE MATRIX Along ================\n");
+disp(Along);
+
+fprintf("\n================ LATERAL STATE MATRIX Alat ======================\n");
+disp(Alat);
+
+%% ============================================================
+% EIGENANALYSIS
+% ============================================================
+[VL,DL] = eig(Along);
+lamLong = diag(DL);
+
+[VT,DT] = eig(Alat);
+lamLat = diag(DT);
+
+fprintf("\n================ LONGITUDINAL EIGENVALUES ======================\n");
+disp(lamLong);
+
+fprintf("\n================ LATERAL EIGENVALUES ===========================\n");
+disp(lamLat);
+
+%% ============================================================
+% IDENTIFY MODES
+% ============================================================
+longModes = classify_longitudinal_modes(lamLong, VL);
+latModes  = classify_lateral_modes(lamLat, VT);
+
+%% ============================================================
+% BUILD STATE-SPACE SYSTEMS
+% ============================================================
+sysLong = ss(Along, zeros(4,1), eye(4), zeros(4,1));
+sysLat  = ss(Alat,  zeros(4,1), eye(4), zeros(4,1));
+
+%% ============================================================
+% LONGITUDINAL MODE PLOTS
+% ============================================================
+tSP = linspace(0, 10, 2001);
+tPH = linspace(0, 80, 4001);
+
+figSP = plot_named_mode(sysLong, tSP, longModes.shortPeriod.vec, ...
+    longModes.shortPeriod.lambda, ["du","w","q","dtheta"], ...
+    "Short Period", "Longitudinal", true);
+
+figPH = plot_named_mode(sysLong, tPH, longModes.phugoid.vec, ...
+    longModes.phugoid.lambda, ["du","w","q","dtheta"], ...
+    "Phugoid", "Longitudinal", true);
+
+if saveFigs
+    exportgraphics(figSP, fullfile(figDir,'short_period.png'), 'Resolution', 300);
+    exportgraphics(figPH, fullfile(figDir,'phugoid.png'), 'Resolution', 300);
+end
+
+%% ============================================================
+% LATERAL MODE PLOTS
+% ============================================================
+tDR = linspace(0, 30, 3001);
+tRS = linspace(0, 8, 1601);
+tSPIR = linspace(0, 30, 3001);
+
+figDR = plot_named_mode(sysLat, tDR, latModes.dutchRoll.vec, ...
+    latModes.dutchRoll.lambda, ["v","p","r","phi"], ...
+    "Dutch Roll", "Lateral", true);
+
+figRS = plot_named_mode(sysLat, tRS, latModes.rollSubsidence.vec, ...
+    latModes.rollSubsidence.lambda, ["v","p","r","phi"], ...
+    "Roll Subsidence", "Lateral", false);
+
+figSpiral = plot_named_mode(sysLat, tSPIR, latModes.spiral.vec, ...
+    latModes.spiral.lambda, ["v","p","r","phi"], ...
+    "Spiral Mode", "Lateral", false);
+
+if saveFigs
+    exportgraphics(figDR, fullfile(figDir,'dutch_roll.png'), 'Resolution', 300);
+    exportgraphics(figRS, fullfile(figDir,'roll_subsidence.png'), 'Resolution', 300);
+    exportgraphics(figSpiral, fullfile(figDir,'spiral_mode.png'), 'Resolution', 300);
+end
+
+%% ============================================================
+% HANDLING-QUALITY METRICS
+% ============================================================
+fprintf("\n================ LONGITUDINAL HANDLING QUALITY =================\n");
+print_longitudinal_handling(longModes);
+
+fprintf("\n================ LATERAL HANDLING QUALITY ======================\n");
+print_lateral_handling(latModes);
+
+fprintf("\nDONE.\n");
+
+%% ============================================================
+% LOCAL FUNCTIONS
+% ============================================================
+
+function write_airfoil(fid, typeStr, nacaStr, aFileStr)
+    typeStr = upper(string(typeStr));
+    if typeStr == "NACA"
+        fprintf(fid,"NACA\n%s\n\n", string(nacaStr));
+    elseif typeStr == "AFILE"
+        if strlength(aFileStr)==0
+            error("AFILE selected but no airfoil filename provided.");
+        end
+        fprintf(fid,"AFILE\n%s\n\n", string(aFileStr));
+    else
+        error("Unknown airfoil type. Use 'NACA' or 'AFILE'.");
+    end
+end
+
+function val = must_getnum(txt, pattern)
+    expr = pattern + "\s*([-+]?(\d+(\.\d*)?|\.\d+)([eEdD][-+]?\d+)?)";
+    tok = regexp(txt, expr, 'tokens', 'once');
+    assert(~isempty(tok), "Could not find pattern: %s", pattern);
+    val = str2double(strrep(tok{1},'D','E'));
+end
+
+function longModes = classify_longitudinal_modes(lam, eigvecs)
+    idxC = find(abs(imag(lam)) > 1e-8);
+    assert(numel(idxC) >= 2, 'Expected two complex longitudinal modes.');
+
+    lamC = lam(idxC);
+    vecC = eigvecs(:,idxC);
+
+    [~, order] = sort(abs(imag(lamC)), 'descend');
+
+    idxSP = order(1);
+    idxPH = order(end);
+
+    longModes.shortPeriod.lambda = lamC(idxSP);
+    longModes.shortPeriod.vec    = vecC(:,idxSP);
+    longModes.shortPeriod.metrics = mode_metrics(lamC(idxSP));
+
+    longModes.phugoid.lambda = lamC(idxPH);
+    longModes.phugoid.vec    = vecC(:,idxPH);
+    longModes.phugoid.metrics = mode_metrics(lamC(idxPH));
+end
+
+function latModes = classify_lateral_modes(lam, eigvecs)
+    idxC = find(abs(imag(lam)) > 1e-8);
+    idxR = find(abs(imag(lam)) <= 1e-8);
+
+    assert(~isempty(idxC), 'Expected Dutch roll complex pair.');
+    assert(numel(idxR) >= 2, 'Expected two real lateral roots.');
+
+    lamC = lam(idxC);
+    vecC = eigvecs(:,idxC);
+
+    [~, idxDR] = max(abs(imag(lamC)));
+    latModes.dutchRoll.lambda = lamC(idxDR);
+    latModes.dutchRoll.vec    = vecC(:,idxDR);
+    latModes.dutchRoll.metrics = mode_metrics(lamC(idxDR));
+
+    lamR = real(lam(idxR));
+    vecR = eigvecs(:,idxR);
+
+    [~, idxMostNeg] = min(lamR);
+    latModes.rollSubsidence.lambda = lamR(idxMostNeg);
+    latModes.rollSubsidence.vec    = vecR(:,idxMostNeg);
+    latModes.rollSubsidence.metrics = mode_metrics(lamR(idxMostNeg));
+
+    tmp = lamR;
+    tmp(idxMostNeg) = inf;
+    [~, idxClosestZero] = min(abs(tmp));
+
+    spiralVal = tmp(idxClosestZero);
+    spiralIdxGlobal = idxR(idxClosestZero);
+
+    latModes.spiral.lambda = spiralVal;
+    latModes.spiral.vec    = eigvecs(:,spiralIdxGlobal);
+    latModes.spiral.metrics = mode_metrics(spiralVal);
+end
+
+function m = mode_metrics(lam)
+    m.lambda = lam;
+    m.sigma  = real(lam);
+    m.omega  = imag(lam);
+
+    if abs(imag(lam)) > 1e-8
+        m.isComplex = true;
+        m.wn    = hypot(real(lam), imag(lam));
+        m.zeta  = -real(lam)/m.wn;
+        m.T     = 2*pi/abs(imag(lam));
+        m.tau   = 1/abs(real(lam));
+
+        if real(lam) < 0
+            m.ts2 = 4/abs(real(lam));
+            m.tDouble = NaN;
+            m.tHalf   = NaN;
+        else
+            m.ts2 = NaN;
+            m.tDouble = log(2)/real(lam);
+            m.tHalf   = NaN;
+        end
+    else
+        m.isComplex = false;
+        m.wn    = NaN;
+        m.zeta  = NaN;
+        m.T     = NaN;
+        m.tau   = 1/abs(real(lam));
+
+        if real(lam) < 0
+            m.tHalf   = log(2)/abs(real(lam));
+            m.tDouble = NaN;
+        elseif real(lam) > 0
+            m.tDouble = log(2)/real(lam);
+            m.tHalf   = NaN;
+        else
+            m.tDouble = Inf;
+            m.tHalf   = Inf;
+        end
+        m.ts2 = NaN;
+    end
+end
+
+function fig = plot_named_mode(sys, t, vec, lam, stateNames, modeName, familyName, isComplexMode)
+    x0 = real(vec);
+    if norm(x0) < 1e-10
+        x0 = imag(vec);
+    end
+    if norm(x0) < 1e-10
+        x0 = ones(length(vec),1);
+    end
+    x0 = x0 / norm(x0);
+
+    [y, tt] = initial(sys, x0, t);
+
+    fig = figure('Color','w');
+    plot(tt, y, 'LineWidth', 1.25);
+    grid on;
+    xlabel('t (s)');
+    ylabel('State response');
+    title(sprintf('%s %s Response', familyName, modeName));
+    legend(stateNames, 'Location', 'best');
+
+    m = mode_metrics(lam);
+    if isComplexMode
+        if real(lam) < 0
+            s = sprintf([ ...
+                '%s\n' ...
+                '\\lambda = %+.4f %+.4fi\n' ...
+                '\\omega_n = %.3f rad/s\n' ...
+                '\\zeta = %.3f\n' ...
+                'T = %.3f s\n' ...
+                '\\tau = %.3f s\n' ...
+                't_s(2%%) \\approx %.3f s'], ...
+                modeName, real(lam), imag(lam), m.wn, m.zeta, m.T, m.tau, m.ts2);
+        else
+            s = sprintf([ ...
+                '%s\n' ...
+                '\\lambda = %+.4f %+.4fi\n' ...
+                '\\omega_n = %.3f rad/s\n' ...
+                '\\zeta = %.3f\n' ...
+                'T = %.3f s\n' ...
+                't_{double} \\approx %.3f s'], ...
+                modeName, real(lam), imag(lam), m.wn, m.zeta, m.T, m.tDouble);
+        end
+    else
+        if real(lam) < 0
+            s = sprintf([ ...
+                '%s\n' ...
+                '\\lambda = %+.4f\n' ...
+                'real mode\n' ...
+                '\\tau = %.3f s\n' ...
+                't_{half} \\approx %.3f s'], ...
+                modeName, real(lam), m.tau, m.tHalf);
+        else
+            s = sprintf([ ...
+                '%s\n' ...
+                '\\lambda = %+.4f\n' ...
+                'real mode\n' ...
+                '\\tau = %.3f s\n' ...
+                't_{double} \\approx %.3f s'], ...
+                modeName, real(lam), m.tau, m.tDouble);
+        end
+    end
+
+    annotation('textbox',[0.14 0.70 0.26 0.22], ...
+        'String', s, ...
+        'FitBoxToText','on', ...
+        'BackgroundColor','w', ...
+        'EdgeColor',[0.2 0.2 0.2]);
+end
+
+function print_longitudinal_handling(longModes)
+    sp = longModes.shortPeriod.metrics;
+    ph = longModes.phugoid.metrics;
+
+    fprintf("Short Period:\n");
+    fprintf("  lambda      = %+.4f %+.4fi\n", real(sp.lambda), imag(sp.lambda));
+    fprintf("  wn          = %.4f rad/s\n", sp.wn);
+    fprintf("  zeta        = %.4f\n", sp.zeta);
+    fprintf("  period      = %.4f s\n", sp.T);
+    fprintf("  tau         = %.4f s\n", sp.tau);
+    fprintf("  ts(2%%)      = %.4f s\n", sp.ts2);
+
+    if sp.zeta >= 0.35 && sp.zeta <= 1.30
+        spLevel = "Level 1 (Phase A/C damping range)";
+    elseif sp.zeta >= 0.30 && sp.zeta <= 2.00
+        spLevel = "Level 1 / acceptable for Phase B damping range";
+    elseif sp.zeta > 0
+        spLevel = "Stable, but outside nominal Level 1 damping range";
+    else
+        spLevel = "Unacceptable / unstable";
+    end
+    fprintf("  HQ assess   = %s\n\n", spLevel);
+
+    fprintf("Phugoid:\n");
+    fprintf("  lambda      = %+.4f %+.4fi\n", real(ph.lambda), imag(ph.lambda));
+    fprintf("  wn          = %.4f rad/s\n", ph.wn);
+    fprintf("  zeta        = %.4f\n", ph.zeta);
+    fprintf("  period      = %.4f s\n", ph.T);
+    fprintf("  tau         = %.4f s\n", ph.tau);
+    fprintf("  ts(2%%)      = %.4f s\n", ph.ts2);
+
+    if ph.zeta >= 0.04
+        phLevel = "Level 1 by phugoid damping criterion";
+    elseif ph.zeta > 0
+        phLevel = "Stable, but below nominal Level 1 phugoid damping";
+    else
+        phLevel = "Unacceptable / unstable";
+    end
+    fprintf("  HQ assess   = %s\n", phLevel);
+end
+
+function print_lateral_handling(latModes)
+    dr = latModes.dutchRoll.metrics;
+    rs = latModes.rollSubsidence.metrics;
+    sp = latModes.spiral.metrics;
+
+    fprintf("Dutch Roll:\n");
+    fprintf("  lambda      = %+.4f %+.4fi\n", real(dr.lambda), imag(dr.lambda));
+    fprintf("  wn          = %.4f rad/s\n", dr.wn);
+    fprintf("  zeta        = %.4f\n", dr.zeta);
+    fprintf("  zeta*wn     = %.4f\n", dr.zeta*dr.wn);
+    fprintf("  period      = %.4f s\n", dr.T);
+    fprintf("  tau         = %.4f s\n", dr.tau);
+    fprintf("  ts(2%%)      = %.4f s\n", dr.ts2);
+
+    if dr.zeta >= 0.08 && (dr.zeta*dr.wn) >= 0.15 && dr.wn >= 0.4
+        drLevel = "Level 1 first-cut check";
+    elseif dr.zeta > 0
+        drLevel = "Stable, but below nominal Level 1 Dutch-roll criterion";
+    else
+        drLevel = "Unacceptable / unstable";
+    end
+    fprintf("  HQ assess   = %s\n\n", drLevel);
+
+    fprintf("Roll Subsidence:\n");
+    fprintf("  lambda      = %+.6f\n", rs.lambda);
+    fprintf("  tau         = %.4f s\n", rs.tau);
+    fprintf("  t_half      = %.4f s\n", rs.tHalf);
+
+    if rs.tau <= 1.4
+        rsLevel = "Level 1 first-cut check";
+    else
+        rsLevel = "Slower than nominal Level 1 roll-mode criterion";
+    end
+    fprintf("  HQ assess   = %s\n\n", rsLevel);
+
+    fprintf("Spiral Mode:\n");
+    fprintf("  lambda      = %+.6f\n", sp.lambda);
+    fprintf("  tau         = %.4f s\n", sp.tau);
+    if real(sp.lambda) > 0
+        fprintf("  t_double    = %.4f s\n", sp.tDouble);
+        if sp.tDouble >= 20
+            spLevel = "Level 1 first-cut check";
+        else
+            spLevel = "Unstable spiral, faster than nominal Level 1 criterion";
+        end
+    else
+        fprintf("  t_half      = %.4f s\n", sp.tHalf);
+        spLevel = "Stable spiral";
+    end
+    fprintf("  HQ assess   = %s\n", spLevel);
+end
