@@ -611,7 +611,7 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.10;
+twistIn.static_margin  = 0.07;
 
 % Distribution settings
 twistIn.model          = 'linear';
