@@ -1390,6 +1390,10 @@ dynIn.CD0           = aeroOut.CD0;
 dynIn.CL_trim       = aeroOut.CL_cruise;
 dynIn.alpha_trim_deg = aeroOut.alpha_cruise_deg;
 
+% Wing twist (linear from root to tip; AInc varies spanwise in AVL)
+dynIn.twist_root_deg = twistOut.twist_root_deg;
+dynIn.twist_tip_deg  = twistOut.twist_tip_deg;
+
 % Vertical fin geometry (root = wing tip, top and bottom tips)
 dynIn.xLE_root_v_m    = vertOut.xLE_root_v_m;
 dynIn.y_root_v_m      = vertOut.y_root_v_m;

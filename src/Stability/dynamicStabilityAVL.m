@@ -79,7 +79,9 @@ function dynOut = dynamicStabilityAVL(dynIn)
     eta1   = dynIn.eta_cs_end;
     cf     = dynIn.cs_chord_frac;
 
-    alphaL0_deg = dynIn.alphaL0_avg_deg;
+    alphaL0_deg    = dynIn.alphaL0_avg_deg;
+    twist_root_deg = dynIn.twist_root_deg;
+    twist_tip_deg  = dynIn.twist_tip_deg;
     u0     = dynIn.V_mps;
     rho    = dynIn.rho_kgm3;
     CD0    = dynIn.CD0;
@@ -119,7 +121,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
     Mach  = u0 / a_sl;          % [-]
 
     write_geom(geomFile, cg, Sref, Cref, Bref, Mach, ...
-        xLE_r, xLE_t, y_root, bHalf, c_r, c_t, alphaL0_deg, ...
+        xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
+        alphaL0_deg, twist_root_deg, twist_tip_deg, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
@@ -444,7 +447,8 @@ end
 %  GEOMETRY WRITER
 %% ========================================================================
 function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
-        xLE_r, xLE_t, y_root, bHalf, c_r, c_t, alphaL0_deg, ...
+        xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
+        alphaL0_deg, twist_root_deg, twist_tip_deg, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
@@ -501,13 +505,15 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     xh_rud = 1.0 - rud_cf;
 
-    % AInc convention: AVL adds AInc to freestream alpha so that
-    % alpha_section = alpha_freestream + AInc.
-    % To represent a cambered section whose zero-lift angle is alphaL0_deg
-    % (negative for positive camber, e.g. -1.314 deg), we need:
-    %   AInc = -alphaL0_deg   (positive value, tilts section nose-up)
-    % Using +alphaL0_deg would produce downforce at positive alpha.
-    AInc = -alphaL0_deg;
+    % AInc per section = geometric twist at that station - alphaL0
+    % AVL: alpha_section = alpha_freestream + AInc
+    % Twist is nose-down (washout) toward tip, so twist_tip < twist_root.
+    % alphaL0 is negative for positive camber (e.g. -1.314 deg), so -alphaL0 > 0.
+    twist_lerp = @(eta) twist_root_deg + eta*(twist_tip_deg - twist_root_deg);
+    AInc0 = twist_lerp(0)    - alphaL0_deg;   % root
+    AInc1 = twist_lerp(eta0) - alphaL0_deg;   % elevon inboard edge
+    AInc2 = twist_lerp(eta1) - alphaL0_deg;   % elevon outboard edge
+    AInc3 = twist_lerp(1.0)  - alphaL0_deg;   % tip
 
     fid = fopen(fname,'w');
     assert(fid > 0, 'dynamicStabilityAVL: cannot write geometry file');
@@ -538,8 +544,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     % ---- Wing ----
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"! WING  (right half defined; YDUPLICATE mirrors about Y=0)\n");
-    fprintf(fid,"! Airfoil: NACA 0012 with AInc = -alphaL0_avg = %.4f deg\n", AInc);
-    fprintf(fid,"!          AInc = -alphaL0  tilts section so zero-lift aligns with cambered airfoil\n");
+    fprintf(fid,"! Airfoil: NACA 0012.  AInc = geometric_twist - alphaL0 (varies spanwise)\n");
+    fprintf(fid,"!   root AInc = %.4f deg  |  tip AInc = %.4f deg\n", AInc0, AInc3);
     fprintf(fid,"! Elevons span eta = %.2f to %.2f of semispan\n", eta0, eta1);
     fprintf(fid,"!   elevator: symmetric  deflection (SgnDup = +1)\n");
     fprintf(fid,"!   aileron:  antisymmetric deflection (SgnDup = -1)\n");
@@ -553,13 +559,13 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Wing root (no control surface) ---\n");
     fprintf(fid,"! Xle[m]      Yle[m]      Zle[m]    Chord[m]    AInc[deg]\n");
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
     fprintf(fid,"NACA\n0012\n\n");
 
     fprintf(fid,"! --- Elevon inboard edge (eta = %.2f, y = %.4f m) ---\n", eta0, y1);
     fprintf(fid,"! CONTROL here = panel from eta%.2f to eta%.2f has elevon\n", eta0, eta1);
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, AInc);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, AInc1);
     fprintf(fid,"NACA\n0012\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"! name       gain   Xhinge   hVec(x y z)   SgnDup\n");
@@ -570,7 +576,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Elevon outboard edge (eta = %.2f, y = %.4f m) ---\n", eta1, y2);
     fprintf(fid,"! CONTROL here closes the elevon panel at this section\n");
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, AInc);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, AInc2);
     fprintf(fid,"NACA\n0012\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0    ! symmetric\n\n", xh_elev);
@@ -580,31 +586,38 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Wing tip (eta = 1.0, y = %.4f m) ---\n", y3);
     fprintf(fid,"! No CONTROL here: elevon ends at eta%.2f, tip is clean\n", eta1);
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc3);
     fprintf(fid,"NACA\n0012\n\n");
 
-    % ---- Right vertical fin — above wing ----
+    % ---- Right vertical fin  (bottom tip → root → top tip, one SURFACE) ----
     fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! RIGHT FIN ABOVE WING  (root → top, z positive)\n");
-    fprintf(fid,"! Airfoil: NACA 0010 (symmetric)\n");
+    fprintf(fid,"! RIGHT VERTICAL FIN\n");
+    fprintf(fid,"! Sections ordered: bottom tip → root (wing tip) → top tip\n");
+    fprintf(fid,"! AVL spans the Z direction through the root in one surface.\n");
+    fprintf(fid,"! Airfoil: NACA 0010 (symmetric).  Rudder on above-wing portion.\n");
     fprintf(fid,"! Rudder spans eta = %.2f to %.2f of above-wing height\n", rud_e0, rud_e1);
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_R_top\n");
-    fprintf(fid,"8 1.0  10 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
+    fprintf(fid,"Vfin_R\n");
+    fprintf(fid,"8 1.0  16 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
 
-    fprintf(fid,"! --- Fin root (= wing tip) ---\n");
+    fprintf(fid,"! --- Bottom tip (below wing, z = %.4f m) ---\n", z_bv);
     fprintf(fid,"! Xle[m]      Yle[m]      Zle[m]      Chord[m]    AInc[deg]\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, y_bv, z_bv, c_tv);
+    fprintf(fid,"NACA\n0010\n\n");
+
+    fprintf(fid,"! --- Root (= wing tip, z = %.4f m) ---\n", z_rv);
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, y_rv, z_rv, c_rv);
     fprintf(fid,"NACA\n0010\n\n");
 
-    fprintf(fid,"! --- Rudder inboard edge (eta = %.2f) ---\n", rud_e0);
+    fprintf(fid,"! --- Rudder inboard edge (eta = %.2f above root) ---\n", rud_e0);
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", x_rud0_R, y_rud0_R, z_rud0_R, c_rud0);
     fprintf(fid,"NACA\n0010\n\n");
 
-    fprintf(fid,"! --- Rudder outboard edge (eta = %.2f) ---\n", rud_e1);
+    fprintf(fid,"! --- Rudder outboard edge (eta = %.2f above root) ---\n", rud_e1);
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", x_rud1_R, y_rud1_R, z_rud1_R, c_rud1);
     fprintf(fid,"NACA\n0010\n\n");
@@ -612,41 +625,27 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! name    gain   Xhinge   hVec(x y z)   SgnDup\n");
     fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    fprintf(fid,"! --- Fin top tip ---\n");
+    fprintf(fid,"! --- Top tip (z = %.4f m) ---\n", z_tv);
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_tv, y_tv, z_tv, c_tv);
     fprintf(fid,"NACA\n0010\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    % ---- Right vertical fin — below wing ----
+    % ---- Left vertical fin  (bottom tip → root → top tip, one SURFACE) ----
     fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! RIGHT FIN BELOW WING  (root → bottom tip, z negative)\n");
-    fprintf(fid,"! No rudder on below-wing portion\n");
-    fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_R_bot\n");
-    fprintf(fid,"8 1.0  6 1.0               ! Nchord  Cspace  Nspan  Sspace\n\n");
-
-    fprintf(fid,"! --- Fin root (= wing tip) ---\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, y_rv, z_rv, c_rv);
-    fprintf(fid,"NACA\n0010\n\n");
-
-    fprintf(fid,"! --- Fin bottom tip ---\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, y_bv, z_bv, c_tv);
-    fprintf(fid,"NACA\n0010\n\n");
-
-    % ---- Left vertical fin — above wing ----
-    fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! LEFT FIN ABOVE WING  (Y negated; rudder gain = -1)\n");
+    fprintf(fid,"! LEFT VERTICAL FIN  (Y negated; rudder gain = -1)\n");
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_L_top\n");
-    fprintf(fid,"8 1.0  10 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
+    fprintf(fid,"Vfin_L\n");
+    fprintf(fid,"8 1.0  16 1.0              ! Nchord  Cspace  Nspan  Sspace\n\n");
 
-    fprintf(fid,"! --- Fin root ---\n");
+    fprintf(fid,"! --- Bottom tip ---\n");
+    fprintf(fid,"SECTION\n");
+    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, -y_bv, z_bv, c_tv);
+    fprintf(fid,"NACA\n0010\n\n");
+
+    fprintf(fid,"! --- Root (= wing tip) ---\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, -y_rv, z_rv, c_rv);
     fprintf(fid,"NACA\n0010\n\n");
@@ -663,30 +662,12 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    fprintf(fid,"! --- Fin top tip ---\n");
+    fprintf(fid,"! --- Top tip ---\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_tv, -y_tv, z_tv, c_tv);
     fprintf(fid,"NACA\n0010\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
-
-    % ---- Left vertical fin — below wing ----
-    fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"! LEFT FIN BELOW WING  (Y negated; no rudder)\n");
-    fprintf(fid,"! ============================================================\n");
-    fprintf(fid,"SURFACE\n");
-    fprintf(fid,"Vfin_L_bot\n");
-    fprintf(fid,"8 1.0  6 1.0               ! Nchord  Cspace  Nspan  Sspace\n\n");
-
-    fprintf(fid,"! --- Fin root ---\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_rv, -y_rv, z_rv, c_rv);
-    fprintf(fid,"NACA\n0010\n\n");
-
-    fprintf(fid,"! --- Fin bottom tip ---\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_bv, -y_bv, z_bv, c_tv);
-    fprintf(fid,"NACA\n0010\n\n");
 
     fclose(fid);
 end
