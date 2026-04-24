@@ -1,0 +1,9 @@
+# Flying-wing mass file (SI)
+# Lunit = 1.0 m
+# Munit = 1.0 kg
+# Tunit = 1.0 s
+Lunit = 1.0 m
+Munit = 1.0 kg
+Tunit = 1.0 s
+# mass  xcg  ycg  zcg  Ixx  Iyy  Izz  Ixy  Ixz  Iyz
+2.382000  0.325708  0.003565  -0.002407  0.145152  0.039346  0.182751  -0.003014  -0.001267  -0.000499

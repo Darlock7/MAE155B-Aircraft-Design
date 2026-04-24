@@ -1,0 +1,28 @@
+ ---------------------------------------------
+ Run case  1:  cruise trim
+
+ alpha        ->  alpha        =  0.604120
+ beta         ->  beta         =  0.000000
+ pb/2V        ->  pb/2V        =  0.000000
+ qc/2V        ->  qc/2V        =  0.000000
+ rb/2V        ->  rb/2V        =  0.000000
+ aileron      ->  aileron      =  0.000000
+ elevator     ->  elevator     =  0.000000
+ rudder       ->  rudder       =  0.000000
+
+ alpha        =  0.604120  deg
+ velocity     =  26.000000  m/s
+ density      =  1.190000  kg/m^3
+ grav.acc.    =  9.810000  m/s^2
+ turn_rad.    =  0.000000  m
+ load_fac.    =  1.000000
+ X_cg         =  0.325708  m
+ Y_cg         =  0.003565  m
+ Z_cg         =  -0.002407  m
+ mass         =  2.382000  kg
+ Ixx          =  0.145152  kg-m^2
+ Iyy          =  0.039346  kg-m^2
+ Izz          =  0.182751  kg-m^2
+ Ixy          =  -0.003014  kg-m^2
+ Ixz          =  -0.001267  kg-m^2
+ Iyz          =  -0.000499  kg-m^2

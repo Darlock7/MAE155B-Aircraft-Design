@@ -1353,6 +1353,99 @@ fprintf('================================================\n\n');
 
 %% =============== Dynamic Stability Analysis (AVL) ==============
 
+dynIn = struct();
+
+% Mass and inertia (body axes, at CG)
+dynIn.mass_kg     = massOut.mass_kg;
+dynIn.Icg_kgm2    = massOut.Icg_kgm2;
+dynIn.cg_m        = massOut.cg_m;
+
+% Aerodynamic reference
+dynIn.S_ref_m2    = S_ref;
+dynIn.MAC_m       = MAC;
+dynIn.b_m         = b;
+
+% Wing geometry
+dynIn.xLE_root_m  = wingIn.xLE_root_m;
+dynIn.xLE_tip_m   = wingOut.xLE_tip_m;
+dynIn.y_root_m    = wingIn.y_root_m;
+dynIn.semiSpan_m  = wingOut.semiSpan_m;
+dynIn.c_root_m    = c_root;
+dynIn.c_tip_m     = c_tip;
+
+% Control surface (elevon)
+dynIn.eta_cs_start  = wingIn.eta_cs_start;
+dynIn.eta_cs_end    = wingIn.eta_cs_end;
+dynIn.cs_chord_frac = wingIn.cs_chord_frac;
+
+% Airfoil zero-lift angle (used as AINC in AVL to set correct camber line)
+dynIn.alphaL0_avg_deg = aeroOut.alphaL0_avg_deg;
+
+% Flight condition
+dynIn.V_mps         = V_cruise;
+dynIn.rho_kgm3      = roh;
+dynIn.CD0           = aeroOut.CD0;
+dynIn.CL_trim       = aeroOut.CL_cruise;
+dynIn.alpha_trim_deg = aeroOut.alpha_cruise_deg;
+
+% Vertical fin geometry (root = wing tip, top = fin tip)
+dynIn.xLE_root_v_m  = vertOut.xLE_root_v_m;
+dynIn.y_root_v_m    = vertOut.y_root_v_m;
+dynIn.z_root_v_m    = vertOut.z_root_v_m;
+dynIn.xLE_top_v_m   = vertOut.xLE_top_v_m;
+dynIn.y_top_v_m     = vertOut.y_top_v_m;
+dynIn.z_top_v_m     = vertOut.z_top_v_m;
+dynIn.c_root_v_m    = c_root_v;
+dynIn.c_tip_v_m     = c_tip_v;
+
+% Rudder
+dynIn.rudder_eta_start = vertIn.rudder.eta_start;
+dynIn.rudder_eta_end   = vertIn.rudder.eta_end;
+dynIn.rudder_cf        = vertIn.rudder.cf_root;
+
+% AVL executable and working directory
+%
+% ---- WINDOWS SETUP (one-time, teammates on PC) ----
+% 1. Go to: https://web.mit.edu/drela/Public/web/avl/
+% 2. Download the Windows binary (e.g. "AVL 3.36 Win")
+% 3. Extract the zip and find avl.exe inside
+% 4. Copy/rename it to:  <project root>/AVL/avl.exe
+% 5. If Windows flags it as unrecognized: right-click avl.exe
+%    -> Properties -> check "Unblock" -> OK
+% 6. Run main.m normally — no other changes needed
+% ---------------------------------------------------
+%
+% Mac/Linux: avl352 is already in AVL/ and runs as-is
+%
+avlDir = fullfile(fileparts(mfilename('fullpath')), 'AVL');
+if ispc
+    dynIn.avlExe = fullfile(avlDir, 'avl.exe');
+else
+    dynIn.avlExe = fullfile(avlDir, 'avl352');
+end
+dynIn.workDir  = avlDir;
+dynIn.plotModes = true;
+
+dynOut = dynamicStabilityAVL(dynIn);
+
+fprintf('\n================ DYNAMIC STABILITY SUMMARY =================\n');
+fprintf('Short period: wn=%.3f rad/s, zeta=%.3f\n', ...
+    dynOut.longModes.shortPeriod.metrics.wn, ...
+    dynOut.longModes.shortPeriod.metrics.zeta);
+fprintf('Phugoid:      wn=%.3f rad/s, zeta=%.3f\n', ...
+    dynOut.longModes.phugoid.metrics.wn, ...
+    dynOut.longModes.phugoid.metrics.zeta);
+fprintf('Dutch roll:   wn=%.3f rad/s, zeta=%.3f\n', ...
+    dynOut.latModes.dutchRoll.metrics.wn, ...
+    dynOut.latModes.dutchRoll.metrics.zeta);
+fprintf('Roll subside: tau=%.3f s\n', dynOut.latModes.rollSubsidence.metrics.tau);
+if real(dynOut.latModes.spiral.lambda) > 0
+    fprintf('Spiral:       t_double=%.1f s\n', dynOut.latModes.spiral.metrics.tDouble);
+else
+    fprintf('Spiral:       stable (t_half=%.1f s)\n', dynOut.latModes.spiral.metrics.tHalf);
+end
+fprintf('=============================================================\n\n');
+
 %% ============== Advanced Aerodynamics (CFD) ============
 
 %% =========== Control Surface (AVL) ================

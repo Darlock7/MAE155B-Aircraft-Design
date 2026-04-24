@@ -1,0 +1,13 @@
+LOAD jager.geo.avl
+MASS jager.mass
+CASE jager.run
+MSET
+0
+OPER
+A 8.250000
+A 8.250000
+X
+ST
+jager_st.txt
+
+QUIT
