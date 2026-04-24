@@ -1,9 +1,0 @@
-LOAD /Users/JuanManuelSanchez/Desktop/MAE155B-Aircraft-Design/AVL/fw_dyn.avl
-MASS /Users/JuanManuelSanchez/Desktop/MAE155B-Aircraft-Design/AVL/fw_dyn.mass
-OPER
-A A 0.604120
-X
-ST
-/Users/JuanManuelSanchez/Desktop/MAE155B-Aircraft-Design/AVL/fw_dyn_st.txt
-
-QUIT

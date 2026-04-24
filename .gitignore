@@ -28,6 +28,14 @@ results/
 output/
 figures/
 
+# AVL generated files (regenerated every run)
+AVL/fw_dyn.avl
+AVL/fw_dyn.mass
+AVL/fw_dyn.run
+AVL/fw_dyn_cmd.txt
+AVL/fw_dyn_st.txt
+AVL/Nimbus/fw_dyn*
+
 # Optional raw data
 data/raw/
 
