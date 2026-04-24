@@ -134,11 +134,17 @@ function dynOut = dynamicStabilityAVL(dynIn)
     % AVL opens its own window — type G at the AVL prompt to see the geometry,
     % then QUIT when done. The analysis run below proceeds independently.
     if doViewGeom
-        fprintf('\n--- Opening AVL geometry viewer (type G at prompt, QUIT when done) ---\n');
+        fprintf('\n--- Opening AVL geometry viewer (type G then QUIT when done) ---\n');
         if ispc
-            system(sprintf('start "" "%s"', avlExe));
+            % Windows: open a new cmd window running AVL
+            system(sprintf('start "AVL Viewer" "%s" "%s"', avlExe, geomFile));
         else
-            system(sprintf('"%s" "%s" &', avlExe, geomFile));
+            % Mac: open a new Terminal window, cd to exe dir, run AVL with geom file
+            avlExeDir = fileparts(avlExe);
+            cmd = sprintf(['osascript -e ''tell application "Terminal" to do script ' ...
+                '"cd \\"%s\\" && \\"%s\\" \\"%s\\""'''], ...
+                avlExeDir, avlExe, geomFile);
+            system(cmd);
         end
         input('Press Enter once you have closed the AVL viewer to continue...');
     end
