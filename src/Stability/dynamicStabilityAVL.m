@@ -496,6 +496,14 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     xh_rud = 1.0 - rud_cf;
 
+    % AInc convention: AVL adds AInc to freestream alpha so that
+    % alpha_section = alpha_freestream + AInc.
+    % To represent a cambered section whose zero-lift angle is alphaL0_deg
+    % (negative for positive camber, e.g. -1.314 deg), we need:
+    %   AInc = -alphaL0_deg   (positive value, tilts section nose-up)
+    % Using +alphaL0_deg would produce downforce at positive alpha.
+    AInc = -alphaL0_deg;
+
     fid = fopen(fname,'w');
     assert(fid > 0, 'dynamicStabilityAVL: cannot write geometry file');
 
@@ -525,8 +533,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     % ---- Wing ----
     fprintf(fid,"! ============================================================\n");
     fprintf(fid,"! WING  (right half defined; YDUPLICATE mirrors about Y=0)\n");
-    fprintf(fid,"! Airfoil: NACA 0012 with AInc = alphaL0_avg = %.4f deg\n", alphaL0_deg);
-    fprintf(fid,"!          (AInc sets zero-lift direction to match cambered section)\n");
+    fprintf(fid,"! Airfoil: NACA 0012 with AInc = -alphaL0_avg = %.4f deg\n", AInc);
+    fprintf(fid,"!          AInc = -alphaL0  tilts section so zero-lift aligns with cambered airfoil\n");
     fprintf(fid,"! Elevons span eta = %.2f to %.2f of semispan\n", eta0, eta1);
     fprintf(fid,"!   elevator: symmetric  deflection (SgnDup = +1)\n");
     fprintf(fid,"!   aileron:  antisymmetric deflection (SgnDup = -1)\n");
@@ -540,13 +548,13 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Wing root (no control surface) ---\n");
     fprintf(fid,"! Xle[m]      Yle[m]      Zle[m]    Chord[m]    AInc[deg]\n");
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, alphaL0_deg);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc);
     fprintf(fid,"NACA\n0012\n\n");
 
     fprintf(fid,"! --- Elevon inboard edge (eta = %.2f, y = %.4f m) ---\n", eta0, y1);
     fprintf(fid,"! CONTROL here = panel from eta%.2f to eta%.2f has elevon\n", eta0, eta1);
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, alphaL0_deg);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, AInc);
     fprintf(fid,"NACA\n0012\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"! name       gain   Xhinge   hVec(x y z)   SgnDup\n");
@@ -557,7 +565,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Elevon outboard edge (eta = %.2f, y = %.4f m) ---\n", eta1, y2);
     fprintf(fid,"! CONTROL here closes the elevon panel at this section\n");
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, alphaL0_deg);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, AInc);
     fprintf(fid,"NACA\n0012\n\n");
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0    ! symmetric\n\n", xh_elev);
@@ -567,7 +575,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! --- Wing tip (eta = 1.0, y = %.4f m) ---\n", y3);
     fprintf(fid,"! No CONTROL here: elevon ends at eta%.2f, tip is clean\n", eta1);
     fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, alphaL0_deg);
+    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc);
     fprintf(fid,"NACA\n0012\n\n");
 
     % ---- Right vertical fin ----
