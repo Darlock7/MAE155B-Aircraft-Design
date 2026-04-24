@@ -35,7 +35,9 @@
 %               updates with change in wing geo and new 3d plot w/ CG
 % Version 16.0:  Adds Drag Build-up, and proper L/D ratio, and respective
 %               Plots
-clc; clearvars; close all;
+% Version 17.0:  Recalculates Engineering design choices like Vstall given
+%               aircraft calcs to showcase how feasible design is.
+% Version 18.0:  Runs AVL for dynamic stability analysis.
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
