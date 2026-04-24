@@ -919,19 +919,20 @@ cadMass.fuselageOnly.Icg_kgm2 =  [ ...
 % -------------------------------------------------------------------------
 comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 
+
 % NOTE: makePointMass(name, mass_kg, [x, y, z])
 
 % ---- Main propulsion ----
 comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
-comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.20,  0.000,  0.000]);
+comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.25,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.37, 0.000, -0.01750000/2]);
-comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.45, 0.000, 0.000]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.40, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.47, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [x_c4_MAC, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.35, 0.000, -0.01750000/2]);
 
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
