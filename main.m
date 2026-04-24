@@ -39,11 +39,16 @@
 %               aircraft calcs to showcase how feasible design is.
 % Version 18.0:  Runs AVL for dynamic stability analysis.
 
+clc; clear; close all;
+
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
 
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
+
+showPlots = false;   % set false to suppress all figures
+if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
 
 %%            ================ User Input ==================
 % (i) Given:
@@ -73,12 +78,7 @@ Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
 Vp     = 0.0029;            % [m^3] actual payload 
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
-% -------- Aerodynamic penalty model for package volume --------
-% No penalty below Vp_ref (i.e. VPS <= 1)
-kd = 0.02;                 % [-] L/D penalty strength per unit VPS beyond reference
-
 % -------- Empty-weight penalty model for package volume --------
-% First-pass empirical penalty on empty-weight fraction
 ke =  fe / 12;               % [-] empty-weight-fraction penalty slope per unit VPS beyond reference
 fe_max = 0.60;             % [-] hard upper cap for sanity
 
@@ -133,20 +133,8 @@ Q_fin  = 1.10;             % [-]
 alphaPolar_deg = -12:0.25:16;   % [deg]
 
 %% ============== Effective Aircraft Penalties ===========
-% Penalties applied relative to Vp_ref
-if VPS <= 1
-    LD_eff = LD;
-else
-    LD_eff = LD; %/ (1 + kd*(VPS - 1));
-end
-
-if VPS <= 1
-    fe_eff = fe;
-else
-    fe_eff = fe + ke*(VPS - 1);
-end
-
-fe_eff = min(fe_eff, fe_max);
+LD_eff = LD;
+fe_eff = min(fe + ke * max(0, VPS - 1), fe_max);
 
 fprintf('\n================ Package Volume Scaling =================\n');
 fprintf('Reference package volume Vp_ref = %.6f m^3\n', Vp_ref);
@@ -1435,7 +1423,7 @@ else
 end
 dynIn.workDir     = avlDir;
 dynIn.plotModes   = true;
-dynIn.viewGeometry = false;  % set true to open AVL geometry viewer before analysis
+dynIn.viewGeometry = true;  % set true to open AVL geometry viewer before analysis
 
 dynOut = dynamicStabilityAVL(dynIn);
 
