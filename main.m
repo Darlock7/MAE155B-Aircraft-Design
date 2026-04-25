@@ -47,7 +47,7 @@ fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timesta
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
 
-showPlots = true;   % set false to suppress all figures
+showPlots = false;   % set false to suppress all figures
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
 
 %%            ================ User Input ==================
@@ -600,7 +600,7 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.07;
+twistIn.static_margin  = 0.1153;
 
 % Distribution settings
 twistIn.model          = 'linear';
@@ -917,11 +917,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.50, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.47, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3470, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3387, 0.000, -0.01750000/2]);
 
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
@@ -1427,7 +1427,7 @@ else
 end
 dynIn.workDir     = avlDir;
 dynIn.plotModes   = true;
-dynIn.viewGeometry = false;  % set true to open AVL geometry viewer before analysis
+dynIn.viewGeometry = true;  % set true to open AVL geometry viewer before analysis
 
 dynOut = dynamicStabilityAVL(dynIn);
 
