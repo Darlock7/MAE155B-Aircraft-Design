@@ -109,25 +109,35 @@ function dynOut = dynamicStabilityAVL(dynIn)
     rud_e1 = dynIn.rudder_eta_end;
     rud_cf = dynIn.rudder_cf;
 
+    doFuselage     = isfield(dynIn,'modelCenterbody') && dynIn.modelCenterbody;
+    airfoilRootFile = '';
+    airfoilTipFile  = '';
+    airfoilFusFile  = '';
+    if isfield(dynIn,'airfoilRootFile'),     airfoilRootFile = dynIn.airfoilRootFile; end
+    if isfield(dynIn,'airfoilTipFile'),      airfoilTipFile  = dynIn.airfoilTipFile;  end
+    if isfield(dynIn,'airfoilFuselageFile'), airfoilFusFile  = dynIn.airfoilFuselageFile; end
+
     avlExe    = string(dynIn.avlExe);
     baseDir   = string(dynIn.workDir);
     doPlot    = dynIn.plotModes;
     doViewGeom = isfield(dynIn,'viewGeometry') && dynIn.viewGeometry;
+    verbose   = ~isfield(dynIn,'verbose') || dynIn.verbose;
 
     %% ---- per-call isolated working directory (parfor-safe) ----
     % Each AVL call gets its own subfolder so parallel workers never clobber each
     % other's files. onCleanup deletes it on exit — including on error.
-    [~, uid] = fileparts(tempname);
-    workDir = fullfile(baseDir, uid);
+    % Use PID for the folder name: short (avoids AVL's ~80-char Fortran path limit)
+    % and unique per worker process.
+    workDir = fullfile(baseDir, sprintf('w%d', feature('getpid')));
     mkdir(workDir);
     cleanupObj = onCleanup(@() rmdir(workDir, 's')); %#ok<NASGU>
 
-    %% ---- file paths ----
-    geomFile = fullfile(workDir, "fw_dyn.avl");
-    massFile = fullfile(workDir, "fw_dyn.mass");
-    runFile  = fullfile(workDir, "fw_dyn.run");
-    cmdFile  = fullfile(workDir, "fw_dyn_cmd.txt");
-    stFile   = fullfile(workDir, "fw_dyn_st.txt");
+    %% ---- file paths (short names: base path is 68 chars, AVL buffer ~80) ----
+    geomFile = fullfile(workDir, "g.avl");
+    massFile = fullfile(workDir, "m.mas");
+    runFile  = fullfile(workDir, "r.run");
+    cmdFile  = fullfile(workDir, "c.cmd");
+    stFile   = fullfile(workDir, "s.txt");
 
     %% ===== STEP 1: WRITE AVL GEOMETRY FILE =====
     % Mach at cruise (used for Prandtl-Glauert correction in AVL)
@@ -142,7 +152,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
-        rud_e0, rud_e1, rud_cf);
+        rud_e0, rud_e1, rud_cf, ...
+        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile);
 
     %% ===== STEP 1b: OPTIONAL GEOMETRY VIEWER =====
     % Launches AVL interactively (no stdin pipe) so you can use the G command.
@@ -262,9 +273,11 @@ fclose(fid);
     syscmd = sprintf('"%s" < "%s"', avlExe, cmdFile);
     [status, cmdout] = system(syscmd);
 
-    fprintf('\n--- AVL exit status = %d ---\n', status);
-    fprintf('\n--- AVL command output ---\n');
-    fprintf('%s\n', cmdout);
+    if verbose
+        fprintf('\n--- AVL exit status = %d ---\n', status);
+        fprintf('\n--- AVL command output ---\n');
+        fprintf('%s\n', cmdout);
+    end
 
     if ~isfile(stFile)
         fprintf('\n--- AVL command file used ---\n');
@@ -320,10 +333,12 @@ fclose(fid);
     derivs.CYp=CYp; derivs.Clp=Clp; derivs.Cnp=Cnp;
     derivs.CYr=CYr; derivs.Clr=Clr; derivs.Cnr=Cnr;
 
-    fprintf('\n--- Parsed derivatives ---\n');
-    fprintf('CL0=%.5f  CD0=%.5f\n', CL0, CD0);
-    fprintf('CLa=%.5f  Cma=%.5f  Cmq=%.5f\n', CLa, Cma, Cmq);
-    fprintf('CYb=%.5f  Clb=%.5f  Cnb=%.5f\n', CYb, Clb, Cnb);
+    if verbose
+        fprintf('\n--- Parsed derivatives ---\n');
+        fprintf('CL0=%.5f  CD0=%.5f\n', CL0, CD0);
+        fprintf('CLa=%.5f  Cma=%.5f  Cmq=%.5f\n', CLa, Cma, Cmq);
+        fprintf('CYb=%.5f  Clb=%.5f  Cnb=%.5f\n', CYb, Clb, Cnb);
+    end
 
     %% ===== STEP 7: INERTIA → STABILITY AXES =====
     % Rotate body inertia by alpha_trim (epsilon) about y-axis
@@ -414,25 +429,30 @@ fclose(fid);
     [VT, DT] = eig(Alat);
     lamLat   = diag(DT);
      
-    fprintf('\n--- Longitudinal eigenvalues ---\n');
-    disp(lamLong)
-
-    fprintf('\n--- Lateral eigenvalues ---\n');
-    disp(lamLat)
+    if verbose
+        fprintf('\n--- Longitudinal eigenvalues ---\n');
+        disp(lamLong)
+        fprintf('\n--- Lateral eigenvalues ---\n');
+        disp(lamLat)
+    end
 
     longModes = classify_long_modes(lamLong, VL);
     latModes  = classify_lat_modes(lamLat, VT);
 
     %% ===== STEP 11: PRINT HANDLING QUALITY REPORT =====
-    fprintf('\n================ LONGITUDINAL HANDLING QUALITY =================\n');
-    print_long_hq(longModes);
-    fprintf('\n================ LATERAL HANDLING QUALITY ======================\n');
-    print_lat_hq(latModes);
+    if verbose
+        fprintf('\n================ LONGITUDINAL HANDLING QUALITY =================\n');
+        print_long_hq(longModes);
+        fprintf('\n================ LATERAL HANDLING QUALITY ======================\n');
+        print_lat_hq(latModes);
+    end
 
     %% ===== STEP 12: OPTIONAL MODE PLOTS =====
-    fprintf('\n--- Plot flag check ---\n');
-    fprintf('doPlot = %d\n', doPlot);
-    fprintf('Reached plotting section.\n');
+    if verbose
+        fprintf('\n--- Plot flag check ---\n');
+        fprintf('doPlot = %d\n', doPlot);
+        fprintf('Reached plotting section.\n');
+    end
     
     if doPlot
         fprintf('Generating dynamic stability plots...\n');
@@ -465,6 +485,7 @@ fclose(fid);
     end
 
     %% ===== PACK OUTPUT =====
+    dynOut.SM_pct      = -Cma / CLa * 100;   % static margin [%MAC]
     dynOut.Along       = Along;
     dynOut.Alat        = Alat;
     dynOut.longModes   = longModes;
@@ -489,7 +510,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
-        rud_e0, rud_e1, rud_cf)
+        rud_e0, rud_e1, rud_cf, ...
+        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile)
 
     Xcg = cg(1);  Ycg = cg(2);  Zcg = cg(3);
 

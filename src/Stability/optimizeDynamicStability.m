@@ -31,6 +31,7 @@ function optOut = optimizeDynamicStability(optIn)
     if ~isfield(optIn,'tolSigma'), optIn.tolSigma = 1e-5;  end
     if ~isfield(optIn,'tolFun'),   optIn.tolFun   = 1e-4;  end
     if ~isfield(optIn,'verbose'),  optIn.verbose  = 10;    end
+    if ~isfield(optIn,'lambda'),   optIn.lambda   = 0;     end  % 0 = use Hansen default
 
     ctx    = optIn.ctx;
     x0     = optIn.x0(:);
@@ -39,10 +40,14 @@ function optOut = optimizeDynamicStability(optIn)
     ub     = optIn.ub(:);
     maxGen = optIn.maxGen;
 
-    n = numel(x0);   % number of variables = 6
+    n = numel(x0);   % number of variables = 7
 
     % ---- CMA-ES hyperparameters (Hansen 2016 defaults) ----
-    lam    = 4 + floor(3*log(n));              % population size (10 for n=6)
+    if optIn.lambda > 0
+        lam = optIn.lambda;
+    else
+        lam = 4 + floor(3*log(n));             % population size (default ~10 for n=7)
+    end
     mu     = floor(lam/2);                     % parents selected
     w_raw  = log(mu + 0.5) - log(1:mu)';       % raw recombination weights
     w      = w_raw / sum(w_raw);               % normalized weights
@@ -70,7 +75,7 @@ function optOut = optimizeDynamicStability(optIn)
 
     JBest       = Inf;
     xBest       = m;
-    infoBest    = struct('SM_pct',NaN,'Xcg_m',NaN,'sp_zeta',NaN,'ph_zeta',NaN,'failed',true);
+    infoBest    = struct('SM_pct',NaN,'Xcg_m',NaN,'sp_zeta',NaN,'ph_zeta',NaN,'dr_zeta',NaN,'failed',true);
     history     = struct('gen',{},'JBest',{},'sigma',{},'SM_pct',{});
 
     fprintf('\n===== CMA-ES OPTIMIZATION  (n=%d, lambda=%d, mu=%d) =====\n', n, lam, mu);

@@ -63,9 +63,8 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
     results = repmat(emptyRes, maxIter, 1);
 
     fprintf('\n===== DYNAMIC STABILITY SWEEP (%d iterations) =====\n', maxIter);
-    fprintf('%-4s %-7s %-6s %-7s %-5s %-6s %-6s %-6s | %-6s %-7s %-7s %-7s %-7s\n', ...
-        'Iter','Sweep','Taper','TwstR','AR_v','Lam_v','Sw_v','xLErt', ...
-        'Xcg','SM%','SP_wn','SP_z','PH_z');
+    fprintf('%-4s  %-6s  %-6s  %-6s  %-6s  %-6s  %s\n', ...
+        'Iter','SM%','SP_z','PH_z','DR_z','Xcg_m','HQ');
 
     for k = 1:maxIter
         try
@@ -178,6 +177,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
             dynIn_k.z_bottom_v_m   = vertOut_k.z_bottom_v_m;
             dynIn_k.c_root_v_m     = vertOut_k.c_root_v_m;
             dynIn_k.c_tip_v_m      = vertOut_k.c_tip_v_m;
+            dynIn_k.verbose        = false;
 
             dynOut_k = dynamicStabilityAVL(dynIn_k);
 
@@ -201,9 +201,16 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
             results(k).dr_zeta   = dr.zeta;
             results(k).failed    = false;
 
-            fprintf('%-4d %-7.1f %-6.3f %-7.2f %-5.2f %-6.3f %-6.1f %-6.4f | %-6.4f %-7.2f %-7.3f %-7.3f %-7.3f\n', ...
-                k, wingSweep_k, taper_k, twistRoot_k, AR_v_k, taperV_k, sweepV_k, xLE_root_k, ...
-                massOut_k.cg_m(1), dynOut_k.SM_pct, sp.wn, sp.zeta, ph.zeta);
+            sp_ok = sp.isComplex && sp.zeta >= 0.35 && sp.zeta <= 1.30;
+            ph_ok = ph.isComplex && ph.zeta >= 0.04;
+            dr_ok = dr.isComplex && dr.zeta >= 0.19;
+            hq_str = '';
+            if ~sp_ok, hq_str = [hq_str 'SP ']; end
+            if ~ph_ok, hq_str = [hq_str 'PH ']; end
+            if ~dr_ok, hq_str = [hq_str 'DR ']; end
+            if isempty(hq_str), hq_str = 'L1'; end
+            fprintf('%-4d  %-6.2f  %-6.3f  %-6.3f  %-6.3f  %-6.4f  %s\n', ...
+                k, dynOut_k.SM_pct, sp.zeta, ph.zeta, dr.zeta, massOut_k.cg_m(1), hq_str);
 
         catch ME
             fprintf('Iter %-3d FAILED: %s\n', k, ME.message);

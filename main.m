@@ -1,7 +1,5 @@
-
-operop
 % 155B Group 2 Main Sizing Script
-% Test Harshil PUll/PUSH
+
 % Intention:
 % Shared main sizing script for the group that can evolve with the
 % project as the design matures. Keep the main script organized and modular
@@ -973,7 +971,7 @@ comp(end+1) = makePointMass('Wing structure L', 0.5*m_wing_struct_kg, [x_wing_st
 comp(end+1) = makePointMass('Wing structure R', 0.5*m_wing_struct_kg, [x_wing_struct,  y_wing_struct, z_wing_struct]);
 
 % First-pass vertical structure estimate
-m_vert_struct_kg = 0.040;   % [kg] total both fins if twin-fin; tune later
+m_vert_struct_kg = 0.104;   % [kg] total both fins — scaled from AR_v=2→5.22 (mass ∝ AR_v)
 
 if vertOut.isTwin
     m_fin_each = 0.5 * m_vert_struct_kg;
@@ -1468,7 +1466,7 @@ sweepIn.wingIn  = wingIn;
 sweepIn.twistIn = twistIn;
 sweepIn.vertIn  = vertIn;
 sweepIn.dynIn   = dynIn;
-sweepIn.maxIter = 10;
+sweepIn.maxIter = 50;
 
 % Wing: [lo, hi]
 sweepIn.wingSweep_range = [20,   40 ];   % [deg]
@@ -1476,12 +1474,12 @@ sweepIn.wingTaper_range = [0.60, 1.00];  % [-]
 sweepIn.twistRoot_range = [-5.0, 0.0 ];  % [deg]
 
 % Vertical fins: [lo, hi]
-sweepIn.AR_v_range    = [1.0, 3.0 ];  % [-]
+sweepIn.AR_v_range    = [1.5, 6.0 ];  % [-]
 sweepIn.taperV_range  = [0.40, 0.80]; % [-]
 sweepIn.sweepV_range  = [20,  45  ];  % [deg]
 
 % Wing attachment fore/aft position: slides NP aft when wing moves aft
-sweepIn.xLE_root_range = [0.00, 0.35];  % [m]  baseline ~0.082
+sweepIn.xLE_root_range = [0.05, 0.20];  % [m]  baseline is 0.0822 m
 
 % Mass inputs — fixed components + scalars for geometry-dependent rebuild
 sweepIn.cadMass          = cadMass;
@@ -1499,22 +1497,22 @@ runOptimization = false;
 if runOptimization
     optIn.ctx    = sweepIn;   % reuse context built above (has cadMass, compFixed, etc.)
 
-    % initial point: current baseline design
-    optIn.x0     = [wingSweep; wingTapper; twistOut.twist_root_deg; ...
-                    vertIn.AR_v; vertIn.taper_v; vertIn.sweep_c4_v_deg; ...
-                    wingIn.xLE_root_m];
+    % initial point: feasible start with AR_v=2 (fins within 50% semispan)
+    % DR Level 1 is not achievable within the height constraint — optimizer
+    % will maximize SM with SP Level 1 and best achievable DR/PH
+    optIn.x0     = [21.0; 0.849; -0.07; 2.0; 0.492; 40.0; 0.1498];
 
-    % search bounds (same as sweep)
-    optIn.lb     = [20;  0.60; -5.0; 1.0; 0.40; 20; 0.00];
-    optIn.ub     = [40;  1.00;  0.0; 3.0; 0.80; 45; 0.35];
+    % search bounds — AR_v capped at 3.0 (50% semispan ≈ AR_v 2.4 for this fin area)
+    optIn.lb     = [20;  0.60; -5.0; 1.0; 0.40; 20; 0.05];
+    optIn.ub     = [40;  1.00;  0.0; 3.0; 0.80; 45; 0.20];
 
-    % initial step size: ~20% of range
-    optIn.sigma0 = 0.2;
+    optIn.sigma0 = 1.0;
 
-    optIn.maxGen   = 200;    % increase to 500 on HPC
-    optIn.tolSigma = 1e-5;
-    optIn.tolFun   = 1e-4;
-    optIn.verbose  = 10;     % print every 10 generations
+    optIn.lambda   = 20;
+    optIn.maxGen   = 500;
+    optIn.tolSigma = 1e-7;
+    optIn.tolFun   = 1e-6;
+    optIn.verbose  = 10;
 
     optOut = optimizeDynamicStability(optIn);
 end
