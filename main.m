@@ -99,8 +99,8 @@ Wp = (Wp_g/1000)*g;        % [N] payload weight
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
 AR          = 8.5;           % [-] first-pass flying-wing assumption
-wingTapper  = 0.85;        % [-]
-wingSweep   = 30;          % [deg] quarter-chord sweep
+wingTapper  = 0.702;       % [-]  optimized (CMA-ES)
+wingSweep   = 22.7;        % [deg] quarter-chord sweep  optimized (CMA-ES)
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
@@ -407,7 +407,7 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0822; % Imported from OnShape 4/21/2026
+wingIn.xLE_root_m = 0.1300; % optimized (CMA-ES); was 0.0822 from OnShape 4/21/2026
 wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
@@ -667,9 +667,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 2.0;
-vertIn.taper_v        = 0.60;
-vertIn.sweep_c4_v_deg = 30.0;
+vertIn.AR_v           = 2.41;  % optimized (CMA-ES)
+vertIn.taper_v        = 0.400; % optimized (CMA-ES)
+vertIn.sweep_c4_v_deg = 40.7;  % optimized (CMA-ES)
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
@@ -971,7 +971,7 @@ comp(end+1) = makePointMass('Wing structure L', 0.5*m_wing_struct_kg, [x_wing_st
 comp(end+1) = makePointMass('Wing structure R', 0.5*m_wing_struct_kg, [x_wing_struct,  y_wing_struct, z_wing_struct]);
 
 % First-pass vertical structure estimate
-m_vert_struct_kg = 0.104;   % [kg] total both fins — scaled from AR_v=2→5.22 (mass ∝ AR_v)
+m_vert_struct_kg = 0.048;   % [kg] total both fins — scaled from AR_v=2 baseline (mass ∝ AR_v, optimized AR_v=2.41)
 
 if vertOut.isTwin
     m_fin_each = 0.5 * m_vert_struct_kg;
@@ -1438,7 +1438,7 @@ else
 end
 dynIn.workDir     = avlDir;
 dynIn.plotModes        = showPlots;
-dynIn.viewGeometry     = false;   % set true to open AVL geometry viewer for debugging
+dynIn.viewGeometry     = false;     % set true to open AVL geometry viewer for debugging
 dynIn.modelCenterbody  = false;
 
 dynOut = dynamicStabilityAVL(dynIn);
@@ -1488,7 +1488,12 @@ sweepIn.eta_servo        = eta_servo;
 sweepIn.m_wing_struct_kg = m_wing_struct_kg;
 sweepIn.m_vert_struct_kg = m_vert_struct_kg;
 
-sweepOut = dynamicStabilitySweep(sweepIn);
+% Set runSweep = true to run. Keep false during normal design runs.
+runSweep = false;
+
+if runSweep
+    sweepOut = dynamicStabilitySweep(sweepIn);
+end
 
 %% =============== CMA-ES Dynamic Stability Optimization ==============
 % Set runOptimization = true to run. Keep false during normal design runs.
