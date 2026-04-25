@@ -110,9 +110,17 @@ function dynOut = dynamicStabilityAVL(dynIn)
     rud_cf = dynIn.rudder_cf;
 
     avlExe    = string(dynIn.avlExe);
-    workDir   = string(dynIn.workDir);
+    baseDir   = string(dynIn.workDir);
     doPlot    = dynIn.plotModes;
     doViewGeom = isfield(dynIn,'viewGeometry') && dynIn.viewGeometry;
+
+    %% ---- per-call isolated working directory (parfor-safe) ----
+    % Each AVL call gets its own subfolder so parallel workers never clobber each
+    % other's files. onCleanup deletes it on exit — including on error.
+    [~, uid] = fileparts(tempname);
+    workDir = fullfile(baseDir, uid);
+    mkdir(workDir);
+    cleanupObj = onCleanup(@() rmdir(workDir, 's')); %#ok<NASGU>
 
     %% ---- file paths ----
     geomFile = fullfile(workDir, "fw_dyn.avl");
