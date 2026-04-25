@@ -1,3 +1,5 @@
+
+operop
 % 155B Group 2 Main Sizing Script
 % Test Harshil PUll/PUSH
 % Intention:
@@ -923,6 +925,12 @@ comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 % ---- Payload ----
 comp(end+1) = makePointMass('Payload', Wp/g, [0.3387, 0.000, -0.01750000/2]);
 
+% *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
+% dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
+% assumes indices 1-6 are exactly: Motor, Prop, ESC, Battery, Receiver, Payload.
+% If you add a mass above, increment the slice in the sweep section below.
+% ************************************************************************
+
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
 
@@ -1375,6 +1383,11 @@ dynIn.alphaL0_tip_deg  = airfoilOut.tip.alphaL0_deg;
 dynIn.Cla_root_per_deg = airfoilOut.root.Cla_per_deg;
 dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 
+% Actual airfoil dat files (AVL reads camber directly; AInc = geometric twist only)
+dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', 'e222.dat');
+dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', 'e230.dat');
+dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'eh0009.dat');
+
 % Flight condition
 dynIn.V_mps         = V_cruise;
 dynIn.rho_kgm3      = roh;
@@ -1426,8 +1439,9 @@ else
     dynIn.avlExe = fullfile(avlExeDir, 'avl352');
 end
 dynIn.workDir     = avlDir;
-dynIn.plotModes   = true;
-dynIn.viewGeometry = true;  % set true to open AVL geometry viewer before analysis
+dynIn.plotModes        = showPlots;
+dynIn.viewGeometry     = false;   % set true to open AVL geometry viewer for debugging
+dynIn.modelCenterbody  = false;
 
 dynOut = dynamicStabilityAVL(dynIn);
 
@@ -1448,6 +1462,62 @@ else
     fprintf('Spiral:       stable (t_half=%.1f s)\n', dynOut.latModes.spiral.metrics.tHalf);
 end
 fprintf('=============================================================\n\n');
+
+%% =============== Dynamic Stability Parameter Sweep ==============
+sweepIn.wingIn  = wingIn;
+sweepIn.twistIn = twistIn;
+sweepIn.vertIn  = vertIn;
+sweepIn.dynIn   = dynIn;
+sweepIn.maxIter = 10;
+
+% Wing: [lo, hi]
+sweepIn.wingSweep_range = [20,   40 ];   % [deg]
+sweepIn.wingTaper_range = [0.60, 1.00];  % [-]
+sweepIn.twistRoot_range = [-5.0, 0.0 ];  % [deg]
+
+% Vertical fins: [lo, hi]
+sweepIn.AR_v_range    = [1.0, 3.0 ];  % [-]
+sweepIn.taperV_range  = [0.40, 0.80]; % [-]
+sweepIn.sweepV_range  = [20,  45  ];  % [deg]
+
+% Wing attachment fore/aft position: slides NP aft when wing moves aft
+sweepIn.xLE_root_range = [0.00, 0.35];  % [m]  baseline ~0.082
+
+% Mass inputs — fixed components + scalars for geometry-dependent rebuild
+sweepIn.cadMass          = cadMass;
+sweepIn.compFixed        = comp(1:6);    % motor, prop, ESC, battery, receiver, payload
+sweepIn.eta_servo        = eta_servo;
+sweepIn.m_wing_struct_kg = m_wing_struct_kg;
+sweepIn.m_vert_struct_kg = m_vert_struct_kg;
+
+sweepOut = dynamicStabilitySweep(sweepIn);
+
+%% =============== CMA-ES Dynamic Stability Optimization ==============
+% Set runOptimization = true to run. Keep false during normal design runs.
+runOptimization = false;
+
+if runOptimization
+    optIn.ctx    = sweepIn;   % reuse context built above (has cadMass, compFixed, etc.)
+
+    % initial point: current baseline design
+    optIn.x0     = [wingSweep; wingTapper; twistOut.twist_root_deg; ...
+                    vertIn.AR_v; vertIn.taper_v; vertIn.sweep_c4_v_deg; ...
+                    wingIn.xLE_root_m];
+
+    % search bounds (same as sweep)
+    optIn.lb     = [20;  0.60; -5.0; 1.0; 0.40; 20; 0.00];
+    optIn.ub     = [40;  1.00;  0.0; 3.0; 0.80; 45; 0.35];
+
+    % initial step size: ~20% of range
+    optIn.sigma0 = 0.2;
+
+    optIn.maxGen   = 200;    % increase to 500 on HPC
+    optIn.tolSigma = 1e-5;
+    optIn.tolFun   = 1e-4;
+    optIn.verbose  = 10;     % print every 10 generations
+
+    optOut = optimizeDynamicStability(optIn);
+end
 
 %% ============== Advanced Aerodynamics (CFD) ============
 
