@@ -581,20 +581,20 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"0.0\n\n");
 
     if doFuselage
-        fprintf(fid,"! CENTERBODY  MH95 fuselage airfoil  AInc=%.4f deg (matches wing root)\n", AInc0);
+        fprintf(fid,"! CENTERBODY  NACA0018  AInc=%.4f deg (matches wing root)\n", AInc0);
         fprintf(fid,"SURFACE\nCenterbody\n");
         fprintf(fid,"10 1.0  8 1.0\n");
         fprintf(fid,"YDUPLICATE\n0.0\n\n");
         fprintf(fid,"SECTION\n");
-        fprintf(fid,"  0.000000   0.000000   0.000000   0.519900   %.6f\n", AInc0);
-        fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
+        fprintf(fid,"  0.000000   0.000000   0.014000   0.850000   %.6f\n", AInc0);
+        fprintf(fid,"NACA\n0018\n");
         fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
         % CAD has an intermediate section at Y=0.070 (LE=0.041, chord=0.4789) but it
         % creates a TE kink (TE flat 0→0.070, then drops 23cm to wing root at 0.145).
         % Removed here; AVL linearly interpolates centerline→wing root without the spike.
         fprintf(fid,"SECTION\n");
         fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
-        fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
+        fprintf(fid,"NACA\n0018\n");
         fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
     end
 
