@@ -1,5 +1,5 @@
 % 155B Group 2 Main Sizing Script
-% Test Harshil PUll/PUSH
+
 % Intention:
 % Shared main sizing script for the group that can evolve with the
 % project as the design matures. Keep the main script organized and modular
@@ -40,6 +40,7 @@
 % Version 18.0:  Runs AVL for dynamic stability analysis.
 
 clc; clear; close all;
+
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
@@ -1375,6 +1376,11 @@ dynIn.alphaL0_tip_deg  = airfoilOut.tip.alphaL0_deg;
 dynIn.Cla_root_per_deg = airfoilOut.root.Cla_per_deg;
 dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 
+% Actual airfoil dat files (AVL reads camber directly; AInc = geometric twist only)
+dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', 'e222.dat');
+dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', 'e230.dat');
+dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'mh95.dat');
+
 % Flight condition
 dynIn.V_mps         = V_cruise;
 dynIn.rho_kgm3      = roh;
@@ -1426,8 +1432,9 @@ else
     dynIn.avlExe = fullfile(avlExeDir, 'avl352');
 end
 dynIn.workDir     = avlDir;
-dynIn.plotModes    = showPlots;
-dynIn.viewGeometry = false;  % set true manually to inspect geometry, never during optimization
+dynIn.plotModes        = showPlots;
+dynIn.viewGeometry     = true;  % set true manually to inspect geometry, never during optimization
+dynIn.modelCenterbody  = true;   % set false to model wing only (no centerbody surface in AVL)
 
 dynOut = dynamicStabilityAVL(dynIn);
 

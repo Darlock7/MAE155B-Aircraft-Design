@@ -27,6 +27,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
 %   .alphaL0_tip_deg  tip zero-lift angle of attack [deg]
 %   .Cla_root_per_deg root 2D lift curve slope [1/deg]
 %   .Cla_tip_per_deg  tip 2D lift curve slope [1/deg]
+%   .airfoilRootFile  path to root airfoil .dat file (string)
+%   .airfoilTipFile   path to tip airfoil .dat file (string)
 %   .V_mps            trim speed [m/s]
 %   .rho_kgm3         air density [kg/m^3]
 %   .CD0              zero-lift drag coefficient [-]
@@ -86,6 +88,13 @@ function dynOut = dynamicStabilityAVL(dynIn)
     alphaL0_tip_deg  = dynIn.alphaL0_tip_deg;
     Cla_root_per_deg = dynIn.Cla_root_per_deg;
     Cla_tip_per_deg  = dynIn.Cla_tip_per_deg;
+    airfoilRootFile  = string(dynIn.airfoilRootFile);
+    airfoilTipFile   = string(dynIn.airfoilTipFile);
+    if isfield(dynIn,'airfoilFuselageFile')
+        airfoilFusFile = string(dynIn.airfoilFuselageFile);
+    else
+        airfoilFusFile = airfoilRootFile;  % fallback: same as wing root
+    end
     twist_root_deg = dynIn.twist_root_deg;
     twist_tip_deg  = dynIn.twist_tip_deg;
     u0     = dynIn.V_mps;
@@ -111,8 +120,9 @@ function dynOut = dynamicStabilityAVL(dynIn)
 
     avlExe    = string(dynIn.avlExe);
     workDir   = string(dynIn.workDir);
-    doPlot    = dynIn.plotModes;
-    doViewGeom = isfield(dynIn,'viewGeometry') && dynIn.viewGeometry;
+    doPlot        = dynIn.plotModes;
+    doViewGeom    = isfield(dynIn,'viewGeometry') && dynIn.viewGeometry;
+    doFuselage    = isfield(dynIn,'modelCenterbody') && dynIn.modelCenterbody;
 
     %% ---- file paths ----
     geomFile = fullfile(workDir, "fw_dyn.avl");
@@ -131,10 +141,11 @@ function dynOut = dynamicStabilityAVL(dynIn)
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
         alphaL0_root_deg, alphaL0_tip_deg, twist_root_deg, twist_tip_deg, ...
         Cla_root_per_deg, Cla_tip_per_deg, ...
+        airfoilRootFile, airfoilTipFile, airfoilFusFile, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
-        rud_e0, rud_e1, rud_cf);
+        rud_e0, rud_e1, rud_cf, doFuselage);
 
     %% ===== STEP 1b: OPTIONAL GEOMETRY VIEWER =====
     % Launches AVL interactively (no stdin pipe) so you can use the G command.
@@ -473,7 +484,7 @@ fclose(fid);
     % Static margin and neutral point (positive SM = stable)
     dynOut.SM_frac     = -derivs.Cma / derivs.CLa;           % [-] fraction of MAC
     dynOut.SM_pct      = dynOut.SM_frac * 100;                % [%MAC]
-    dynOut.Xnp_m       = cg(1) - dynOut.SM_frac * Cref;      % [m]
+    dynOut.Xnp_m       = cg(1) + dynOut.SM_frac * Cref;      % [m]
 end
 
 %% ========================================================================
@@ -483,10 +494,11 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
         xLE_r, xLE_t, y_root, bHalf, c_r, c_t, ...
         alphaL0_root_deg, alphaL0_tip_deg, twist_root_deg, twist_tip_deg, ...
         Cla_root_per_deg, Cla_tip_per_deg, ...
+        airfoilRootFile, airfoilTipFile, airfoilFusFile, ...
         eta0, eta1, cf, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
-        rud_e0, rud_e1, rud_cf)
+        rud_e0, rud_e1, rud_cf, doFuselage)
 
     Xcg = cg(1);  Ycg = cg(2);  Zcg = cg(3);
 
@@ -539,14 +551,13 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     xh_rud = 1.0 - rud_cf;
 
-    % AInc(eta) = twist_geo(eta) - alphaL0(eta)
-    % Both geometric twist and zero-lift angle vary root→tip.
-    twist_lerp   = @(eta) twist_root_deg    + eta*(twist_tip_deg    - twist_root_deg);
-    alphaL0_lerp = @(eta) alphaL0_root_deg  + eta*(alphaL0_tip_deg  - alphaL0_root_deg);
-    AInc0 = twist_lerp(0)    - alphaL0_lerp(0);    % root
-    AInc1 = twist_lerp(eta0) - alphaL0_lerp(eta0); % elevon inboard edge
-    AInc2 = twist_lerp(eta1) - alphaL0_lerp(eta1); % elevon outboard edge
-    AInc3 = twist_lerp(1.0)  - alphaL0_lerp(1.0);  % tip
+    % AInc(eta) = twist_geo(eta) only — actual airfoil .dat files already encode camber,
+    % so alphaL0 is baked into the geometry and must NOT be subtracted here.
+    twist_lerp = @(eta) twist_root_deg + eta*(twist_tip_deg - twist_root_deg);
+    AInc0 = twist_lerp(0);    % root
+    AInc1 = twist_lerp(eta0); % elevon inboard edge
+    AInc2 = twist_lerp(eta1); % elevon outboard edge
+    AInc3 = twist_lerp(1.0);  % tip
 
     % CLAF: actual 2D lift curve slope [/rad] for each section (AVL default = 2pi)
     deg2rad = pi/180;
@@ -561,7 +572,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     % Header
     fprintf(fid,"! MAE 155B Flying-Wing  |  X fwd Y right Z up  |  meters\n");
-    fprintf(fid,"! AInc = geometric_twist - alphaL0  (root %.4f deg, tip %.4f deg)\n", AInc0, AInc3);
+    fprintf(fid,"! AInc = geometric_twist only (airfoil camber in .dat)  root=%.4f deg  tip=%.4f deg\n", AInc0, AInc3);
     fprintf(fid,"Flying-Wing Dynamic Stability\n");
     fprintf(fid,"%.4f     ! Mach\n", Mach);
     fprintf(fid,"0  0  0.0\n");
@@ -569,41 +580,52 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   ! Xref Yref Zref (CG)\n", Xcg, Ycg, Zcg);
     fprintf(fid,"0.0\n\n");
 
-    % Centerbody (CAD dimensions; 4th section closes gap to wing root)
-    % Centerbody uses AInc0 (root value) throughout: same camber/twist as wing root
-    fprintf(fid,"! CENTERBODY  NACA0012  AInc=%.4f deg (matches wing root)\n", AInc0);
-    fprintf(fid,"SURFACE\nCenterbody\n");
-    fprintf(fid,"10 1.0  8 1.0\n");
-    fprintf(fid,"YDUPLICATE\n0.0\n\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  0.000000   0.000000   0.000000   0.519900   %.6f\n", AInc0);
-    fprintf(fid,"NACA\n0012\n");
-    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  0.041000   0.070000   0.000000   0.478912   %.6f\n", AInc0);
-    fprintf(fid,"NACA\n0012\n");
-    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
-    fprintf(fid,"! blend to wing root\n");
-    fprintf(fid,"SECTION\n");
-    fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
-    fprintf(fid,"NACA\n0012\n");
-    fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+    if doFuselage
+        fprintf(fid,"! CENTERBODY  MH95 fuselage airfoil  AInc=%.4f deg (matches wing root)\n", AInc0);
+        fprintf(fid,"SURFACE\nCenterbody\n");
+        fprintf(fid,"10 1.0  8 1.0\n");
+        fprintf(fid,"YDUPLICATE\n0.0\n\n");
+        fprintf(fid,"SECTION\n");
+        fprintf(fid,"  0.000000   0.000000   0.000000   0.519900   %.6f\n", AInc0);
+        fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
+        fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+        % CAD has an intermediate section at Y=0.070 (LE=0.041, chord=0.4789) but it
+        % creates a TE kink (TE flat 0→0.070, then drops 23cm to wing root at 0.145).
+        % Removed here; AVL linearly interpolates centerline→wing root without the spike.
+        fprintf(fid,"SECTION\n");
+        fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
+        fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
+        fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+    end
 
-    % Wing (right half; YDUPLICATE mirrors to left)
-    fprintf(fid,"! WING  NACA0012  elevons eta=%.2f-%.2f\n", eta0, eta1);
+    % Wing (right half; YDUPLICATE mirrors to left); E222 inboard, E230 outboard
+    fprintf(fid,"! WING  E222(root)→E230(tip)  elevons eta=%.2f-%.2f\n", eta0, eta1);
     fprintf(fid,"SURFACE\nWing\n");
     fprintf(fid,"12 1.0  20 1.0\n");
     fprintf(fid,"YDUPLICATE\n0.0\n\n");
 
+    if ~doFuselage
+        % Extend wing to Y=0 by linearly extrapolating LE sweep and taper inboard.
+        % This gives a clean streamlined planform with consistent sweep all the way
+        % to centerline — no centerbody bulge.
+        xw_ctr = xw0 - y0 * (xLE_t - xLE_r) / bHalf;
+        cw_ctr = cw0 - y0 * (c_t   - c_r)   / bHalf;
+        xw_ctr = max(xw_ctr, 0);
+        fprintf(fid,"SECTION\n");
+        fprintf(fid,"  %-10.6f   0.000000   0.000000   %-10.6f   %.6f\n", xw_ctr, cw_ctr, AInc0);
+        fprintf(fid,"AFILE\n%s\n", airfoilRootFile);
+        fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
+    end
+
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
-    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"AFILE\n%s\n", airfoilRootFile);
     fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
 
     fprintf(fid,"! elevon starts\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw1, y1, cw1, AInc1);
-    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"AFILE\n%s\n", airfoilRootFile);
     fprintf(fid,"CLAF\n%.4f\n", Claf1);
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0\n", xh_elev);
@@ -613,7 +635,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"! elevon ends\n");
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw2, y2, cw2, AInc2);
-    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"AFILE\n%s\n", airfoilTipFile);
     fprintf(fid,"CLAF\n%.4f\n", Claf2);
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"elevator     1.000  %.3f     0 0 0         1.0\n", xh_elev);
@@ -622,7 +644,7 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
 
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw3, y3, cw3, AInc3);
-    fprintf(fid,"NACA\n0012\n");
+    fprintf(fid,"AFILE\n%s\n", airfoilTipFile);
     fprintf(fid,"CLAF\n%.4f\n\n", Claf3);
 
     % Right fin  (bottom tip → root → top tip)
