@@ -47,7 +47,22 @@ fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timesta
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
 
-showPlots = false;   % set false to suppress all figures
+%% =================== Run Flags (edit here) =========================
+% Figures
+showPlots       = false;  % true = show all figures throughout the script
+
+% AVL geometry viewer (opens interactive Terminal window — requires manual close)
+viewGeometry    = false;  % true = open AVL 3D viewer before stability run
+modelCenterbody = false;  % true = include fuselage as AVL lifting surface
+                          %        (flat-plate model overestimates lift — keep false)
+
+% Long-running analyses (keep false for normal design runs)
+useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
+runCSopt        = false;  % true = CMA-ES elevon optimizer          (~10 min)
+runSweep        = false;  % true = dynamic stability parameter sweep (~5 min)
+runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
+%% ==================================================================
+
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
 
 %%            ================ User Input ==================
@@ -104,8 +119,6 @@ wingSweep   = 22.7;        % [deg] quarter-chord sweep  optimized (CMA-ES)
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
-
-useDragBuildUp = true;     % true = compute CD0 from geometry, false = use CD0 below
 
 % ---- fallback parasite drag if not using build-up ----
 CD0_user = CD0;            % [-]
@@ -1438,8 +1451,8 @@ else
 end
 dynIn.workDir     = avlDir;
 dynIn.plotModes        = showPlots;
-dynIn.viewGeometry     = false;     % set true to open AVL geometry viewer for debugging
-dynIn.modelCenterbody  = false;
+dynIn.viewGeometry     = viewGeometry;
+dynIn.modelCenterbody  = modelCenterbody;
 
 dynOut = dynamicStabilityAVL(dynIn);
 
@@ -1480,6 +1493,30 @@ csIn.showPlots = showPlots;
 
 csOut = controlSurfaceSizing(csIn);
 
+%% =============== Control Surface Optimization ==============
+if runCSopt
+    csOptIn.dynIn           = dynIn;
+    csOptIn.CL_trim         = aeroOut.CL_cruise;
+    csOptIn.CLmax           = CLmax;
+    csOptIn.V_mps           = V_cruise;
+    csOptIn.rho_kgm3        = roh;
+    csOptIn.S_ref_m2        = wingOut.S_ref_m2;
+    csOptIn.b_m             = wingOut.b_m;
+    csOptIn.mass_kg         = massOut.mass_kg;
+    csOptIn.chord_range     = [0.20 0.40];
+    csOptIn.start_range     = [0.35 0.65];
+    csOptIn.deta_range      = [0.20 0.40];
+    csOptIn.N_chord         = 5;
+    csOptIn.N_start         = 4;
+    csOptIn.N_deta          = 4;
+    csOptIn.delta_e_max     = 20;
+    csOptIn.p_ss_min_dps    = 100;
+    csOptIn.de_trim_max_deg = 15;
+    csOptIn.eta_end_max     = 0.95;
+
+    csOptOut = optimizeControlSurfaces(csOptIn);
+end
+
 %% =============== Dynamic Stability Parameter Sweep ==============
 sweepIn.wingIn  = wingIn;
 sweepIn.twistIn = twistIn;
@@ -1507,17 +1544,11 @@ sweepIn.eta_servo        = eta_servo;
 sweepIn.m_wing_struct_kg = m_wing_struct_kg;
 sweepIn.m_vert_struct_kg = m_vert_struct_kg;
 
-% Set runSweep = true to run. Keep false during normal design runs.
-runSweep = false;
-
 if runSweep
     sweepOut = dynamicStabilitySweep(sweepIn);
 end
 
 %% =============== CMA-ES Dynamic Stability Optimization ==============
-% Set runOptimization = true to run. Keep false during normal design runs.
-runOptimization = false;
-
 if runOptimization
     optIn.ctx    = sweepIn;   % reuse context built above (has cadMass, compFixed, etc.)
 
