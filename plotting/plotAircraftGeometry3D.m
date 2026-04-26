@@ -11,6 +11,7 @@ function plotAircraftGeometry3D(geom3DIn)
 % Optional features:
 %   - Loaded / unloaded CG markers
 %   - Point-mass component markers and labels
+%   - Shaded elevon and rudder patches (set plotControlSurfaces = true)
 
     arguments
         geom3DIn struct
@@ -37,6 +38,7 @@ function plotAircraftGeometry3D(geom3DIn)
     if ~isfield(geom3DIn,'plotCG');              geom3DIn.plotCG = false; end
     if ~isfield(geom3DIn,'plotComponents');      geom3DIn.plotComponents = false; end
     if ~isfield(geom3DIn,'plotComponentLabels'); geom3DIn.plotComponentLabels = false; end
+    if ~isfield(geom3DIn,'plotControlSurfaces'); geom3DIn.plotControlSurfaces = false; end
 
     if ~isfield(geom3DIn,'z_MAC_m')
         geom3DIn.z_MAC_m = geom3DIn.z_root_m;
@@ -58,6 +60,8 @@ function plotAircraftGeometry3D(geom3DIn)
     y_MAC   = geom3DIn.y_MAC_m;
     z_MAC   = geom3DIn.z_MAC_m;
     MAC     = geom3DIn.MAC_m;
+
+    semiSpan = y_tip - y_root;
 
     %% ---------------- Figure ----------------
     figure; hold on; grid on; axis equal;
@@ -102,6 +106,25 @@ function plotAircraftGeometry3D(geom3DIn)
         'r','LineWidth',3);
     plot3([xLE_MAC xLE_MAC+MAC],[-y_MAC -y_MAC],[z_MAC z_MAC], ...
         'r','LineWidth',3);
+
+    %% ---------------- Control surfaces ----------------
+    if geom3DIn.plotControlSurfaces
+        eta_s = geom3DIn.eta_cs_start;
+        eta_e = geom3DIn.eta_cs_end;
+        cf    = geom3DIn.cs_chord_frac;
+
+        drawElevon(xLE_root, y_root, z_root, xLE_tip, y_tip, z_tip, ...
+                   c_root, c_tip, eta_s, eta_e, cf, semiSpan, +1);
+        drawElevon(xLE_root, y_root, z_root, xLE_tip, y_tip, z_tip, ...
+                   c_root, c_tip, eta_s, eta_e, cf, semiSpan, -1);
+
+        if geom3DIn.plotVertical && isfield(geom3DIn,'rudder_cf') && isfield(geom3DIn,'vertOut')
+            drawRudder(geom3DIn.vertOut, geom3DIn.rudder_cf, ...
+                       geom3DIn.rudder_eta_start, geom3DIn.rudder_eta_end, +1);
+            drawRudder(geom3DIn.vertOut, geom3DIn.rudder_cf, ...
+                       geom3DIn.rudder_eta_start, geom3DIn.rudder_eta_end, -1);
+        end
+    end
 
     %% ---------------- Body / package ----------------
     if geom3DIn.plotBody
@@ -209,6 +232,18 @@ function plotAircraftGeometry3D(geom3DIn)
         legendEntries{end+1} = 'Vertical surface'; %#ok<AGROW>
     end
 
+    if geom3DIn.plotControlSurfaces
+        hElev = patch(nan,nan,nan,[1 0.55 0],'FaceAlpha',0.55,'EdgeColor',[0.7 0.35 0]);
+        legendHandles(end+1) = hElev; %#ok<AGROW>
+        legendEntries{end+1} = 'Elevon'; %#ok<AGROW>
+
+        if geom3DIn.plotVertical && isfield(geom3DIn,'rudder_cf')
+            hRud = patch(nan,nan,nan,[0.2 0.5 1],'FaceAlpha',0.55,'EdgeColor',[0.1 0.3 0.8]);
+            legendHandles(end+1) = hRud; %#ok<AGROW>
+            legendEntries{end+1} = 'Rudder'; %#ok<AGROW>
+        end
+    end
+
     if geom3DIn.plotComponents
         hComp = plot3(nan,nan,nan,'ko','MarkerFaceColor',[0.2 0.2 0.2],'MarkerSize',5);
         legendHandles(end+1) = hComp; %#ok<AGROW>
@@ -239,6 +274,72 @@ function plotTwistedChord(LE, chord, twist_deg, style)
     x1 = LE(1) + chord*cos(theta);
     z1 = LE(3) - chord*sin(theta);
     plot3([LE(1) x1], [LE(2) LE(2)], [LE(3) z1], style, 'LineWidth', 2);
+end
+
+function drawElevon(xLE_root, y_root, z_root, xLE_tip, y_tip, z_tip, ...
+                    c_root, c_tip, eta_s, eta_e, cf, semiSpan, side)
+% Shaded elevon patch on one wing half.
+% eta_s / eta_e : inboard / outboard fraction of semispan (0 = root, 1 = tip)
+% cf            : chord fraction (elevon occupies trailing cf fraction)
+% side          : +1 = right wing, -1 = left wing
+
+    function [xH, xTE, yp, zp] = wingAt(eta)
+        xLE = xLE_root + eta*(xLE_tip - xLE_root);
+        c   = c_root   + eta*(c_tip   - c_root);
+        yp  = side * (y_root + eta * semiSpan);
+        zp  = z_root   + eta*(z_tip   - z_root);
+        xH  = xLE + (1 - cf) * c;
+        xTE = xLE + c;
+    end
+
+    [xH_s, xTE_s, y_s, z_s] = wingAt(eta_s);
+    [xH_e, xTE_e, y_e, z_e] = wingAt(eta_e);
+
+    Xv = [xH_s  xTE_s  xTE_e  xH_e];
+    Yv = [y_s   y_s    y_e    y_e ];
+    Zv = [z_s   z_s    z_e    z_e ];
+
+    patch(Xv, Yv, Zv, [1 0.55 0], 'FaceAlpha', 0.55, ...
+          'EdgeColor', [0.7 0.35 0], 'LineWidth', 1.2);
+    plot3([xH_s xH_e], [y_s y_e], [z_s z_e], ...
+          '-', 'Color', [0.7 0.35 0], 'LineWidth', 1.8);
+end
+
+function drawRudder(vertOut, rud_cf, eta_s, eta_e, side)
+% Shaded rudder patch on one vertical fin (top section only).
+% eta_s / eta_e : fraction of top-section fin height (0 = fin root, 1 = fin tip)
+% rud_cf        : rudder chord fraction of local fin chord
+% side          : +1 = right fin, -1 = left fin
+
+    xr = vertOut.xLE_root_v_m;
+    yr = side * vertOut.y_root_v_m;
+    zr = vertOut.z_root_v_m;
+    xt = vertOut.xLE_top_v_m;
+    yt = side * vertOut.y_top_v_m;
+    zt = vertOut.z_top_v_m;
+    cr = vertOut.c_root_v_m;
+    ct = vertOut.c_tip_v_m;
+
+    function [xH, xTE, yp, zp] = finAt(t)
+        xLE = xr + t*(xt - xr);
+        c   = cr + t*(ct - cr);
+        yp  = yr + t*(yt - yr);
+        zp  = zr + t*(zt - zr);
+        xH  = xLE + (1 - rud_cf) * c;
+        xTE = xLE + c;
+    end
+
+    [xH_s, xTE_s, y_s, z_s] = finAt(eta_s);
+    [xH_e, xTE_e, y_e, z_e] = finAt(eta_e);
+
+    Xv = [xH_s  xTE_s  xTE_e  xH_e];
+    Yv = [y_s   y_s    y_e    y_e ];
+    Zv = [z_s   z_s    z_e    z_e ];
+
+    patch(Xv, Yv, Zv, [0.2 0.5 1], 'FaceAlpha', 0.55, ...
+          'EdgeColor', [0.1 0.3 0.8], 'LineWidth', 1.2);
+    plot3([xH_s xH_e], [y_s y_e], [z_s z_e], ...
+          '-', 'Color', [0.1 0.3 0.8], 'LineWidth', 1.8);
 end
 
 function drawVerticalSurfacePairAbsolute(vertOut)

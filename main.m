@@ -1243,6 +1243,15 @@ geom3DIn.plotBody            = false;
 geom3DIn.plotCG              = true;
 geom3DIn.plotComponents      = true;
 geom3DIn.plotComponentLabels = false;   % turn true later if you want labels
+geom3DIn.plotControlSurfaces = true;
+
+% -------- Control surface geometry for visualization --------
+geom3DIn.eta_cs_start    = wingIn.eta_cs_start;
+geom3DIn.eta_cs_end      = wingIn.eta_cs_end;
+geom3DIn.cs_chord_frac   = wingIn.cs_chord_frac;
+geom3DIn.rudder_cf       = vertIn.rudder.cf_root;
+geom3DIn.rudder_eta_start = vertIn.rudder.eta_start;
+geom3DIn.rudder_eta_end   = vertIn.rudder.eta_end;
 
 % -------- Vertical surfaces --------
 geom3DIn.vertOut = vertOut;
