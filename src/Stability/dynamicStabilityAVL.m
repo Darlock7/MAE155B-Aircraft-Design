@@ -315,6 +315,16 @@ fclose(fid);
     Clr = get("Clr =");
     Cnr = get("Cnr =");
 
+    % Control surface derivatives (per degree of deflection)
+    % d01=elevator, d02=aileron, d03=rudder — order matches CONTROL lines in geom file
+    Cm0_trim = get("Cmtot =");   % residual Cm at run condition (δe=0)
+    CLde     = get("CLd01 =");
+    Cmde     = get("Cmd01 =");
+    Clda     = get("Cld02 =");
+    Cnda     = get("Cnd02 =");
+    CYdr     = get("CYd03 =");
+    Cndr     = get("Cnd03 =");
+
     if isnan(CDa)
       CDa = 0.0;
     end
@@ -498,6 +508,14 @@ fclose(fid);
     dynOut.Jxz         = Jxz;
     dynOut.qbar_Pa     = qbar;
     dynOut.stFile      = stFile;
+    dynOut.controlDerivs = struct( ...
+        'CLde',    CLde,  ...   % elevator → CL  [/deg]
+        'Cmde',    Cmde,  ...   % elevator → Cm  [/deg]
+        'Clda',    Clda,  ...   % aileron  → Cl  [/deg]
+        'Cnda',    Cnda,  ...   % aileron  → Cn  [/deg] (adverse yaw)
+        'CYdr',    CYdr,  ...   % rudder   → CY  [/deg]
+        'Cndr',    Cndr,  ...   % rudder   → Cn  [/deg]
+        'Cm0_trim', Cm0_trim);  % Cm at δe=0 run condition [-]
 end
 
 %% ========================================================================
@@ -680,8 +698,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"CONTROL\n");
     fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
-    % Left fin  (Y negated; rudder gain = -1)
-    fprintf(fid,"! VFIN_L  mirror of Vfin_R  rudder gain=-1\n");
+    % Left fin  (Y negated; rudder gain = +1 — same as right fin so forces add, not cancel)
+    fprintf(fid,"! VFIN_L  mirror of Vfin_R  rudder gain=+1\n");
     fprintf(fid,"SURFACE\nVfin_L\n");
     fprintf(fid,"8 1.0  16 1.0\n\n");
 
@@ -701,13 +719,13 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", x_rud1_R, -y_rud1_R, z_rud1_R, c_rud1);
     fprintf(fid,"NACA\n0010\n");
     fprintf(fid,"CONTROL\n");
-    fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
+    fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
     fprintf(fid,"SECTION\n");
     fprintf(fid,"  %-10.6f   %-10.6f   %-10.6f   %-10.6f   0.000000\n", xLE_tv, -y_tv, z_tv, c_tv);
     fprintf(fid,"NACA\n0010\n");
     fprintf(fid,"CONTROL\n");
-    fprintf(fid,"rudder   -1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
+    fprintf(fid,"rudder    1.000  %.3f     0 0 0          1.0\n\n", xh_rud);
 
     fclose(fid);
 end

@@ -1461,6 +1461,25 @@ else
 end
 fprintf('=============================================================\n\n');
 
+%% =============== Control Surface Sizing ==============
+csIn.CLde      = dynOut.controlDerivs.CLde;
+csIn.Cmde      = dynOut.controlDerivs.Cmde;
+csIn.Clda      = dynOut.controlDerivs.Clda;
+csIn.Cnda      = dynOut.controlDerivs.Cnda;
+csIn.Cndr      = dynOut.controlDerivs.Cndr;
+csIn.Cm0_trim  = dynOut.controlDerivs.Cm0_trim;
+csIn.CL_trim   = aeroOut.CL_cruise;
+csIn.CLmax     = CLmax;
+csIn.V_mps     = V_cruise;
+csIn.rho_kgm3  = roh;
+csIn.S_ref_m2  = wingOut.S_ref_m2;
+csIn.b_m       = wingOut.b_m;
+csIn.mass_kg   = massOut.mass_kg;
+csIn.Clp       = dynOut.derivatives.Clp;
+csIn.showPlots = showPlots;
+
+csOut = controlSurfaceSizing(csIn);
+
 %% =============== Dynamic Stability Parameter Sweep ==============
 sweepIn.wingIn  = wingIn;
 sweepIn.twistIn = twistIn;
