@@ -424,10 +424,10 @@ wingIn.xLE_root_m = 0.1300; % optimized (CMA-ES); was 0.0822 from OnShape 4/21/2
 wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
-% First-pass elevon / control-surface assumptions
-wingIn.eta_cs_start = 0.60;     % starts at 60% semispan
-wingIn.eta_cs_end   = 0.90;     % ends at 90% semispan
-wingIn.cs_chord_frac = 0.25;    % 25% of local chord
+% Elevon geometry — CMA-ES optimized (runCSopt)
+wingIn.eta_cs_start  = 0.300;   % starts at 30% semispan
+wingIn.eta_cs_end    = 0.749;   % ends at 74.9% semispan
+wingIn.cs_chord_frac = 0.450;   % 45% of local chord
 
 wingOut = wingGeometryDesign(wingIn);
 
@@ -702,8 +702,8 @@ vertIn.rudder.enable      = true;
 vertIn.rudder.useTopOnly  = true;   % best match for winglet-like fin
 vertIn.rudder.eta_start   = 0.15;   % start at 15% of top exposed height
 vertIn.rudder.eta_end     = 0.95;   % end near tip
-vertIn.rudder.cf_root     = 0.30;   % rudder chord = 30% of local chord
-vertIn.rudder.cf_tip      = 0.30;
+vertIn.rudder.cf_root     = 0.500;  % rudder chord — CMA-ES optimized (runCSopt)
+vertIn.rudder.cf_tip      = 0.500;
 
 % Run function
 vertOut = verticalSurfaceDesign(vertIn);
