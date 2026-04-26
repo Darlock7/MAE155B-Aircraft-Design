@@ -1503,13 +1503,8 @@ if runCSopt
     csOptIn.S_ref_m2        = wingOut.S_ref_m2;
     csOptIn.b_m             = wingOut.b_m;
     csOptIn.mass_kg         = massOut.mass_kg;
-    csOptIn.chord_range     = [0.20 0.40];
-    csOptIn.start_range     = [0.35 0.65];
-    csOptIn.deta_range      = [0.20 0.40];
-    csOptIn.N_chord         = 5;
-    csOptIn.N_start         = 4;
-    csOptIn.N_deta          = 4;
     csOptIn.delta_e_max     = 20;
+    csOptIn.delta_r_max     = 25;
     csOptIn.p_ss_min_dps    = 100;
     csOptIn.de_trim_max_deg = 15;
     csOptIn.eta_end_max     = 0.95;
