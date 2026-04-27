@@ -64,10 +64,10 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = false;  % true = show all figures throughout the script
+showPlots       = true;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = true;   % true = open AVL 3D viewer before stability run
 modelCenterbody = false;  % true = include fuselage as AVL lifting surface
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -107,7 +107,7 @@ fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
 %   Vp = 0.010 m^3  --> VPS = 10
 
 Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
-Vp     = 0.0150;            % [m^3] CMA-ES optimal (was 0.0060)
+Vp     = 0.00387150010324;            % [m^3] CMA-ES optimal (was 0.0060)
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
 % -------- Empty-weight penalty model for package volume --------
@@ -125,7 +125,7 @@ R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
 V_cruise = 20.0;           % [m/s] CMA-ES optimal (was 24)
 V_stall_mps = 12;   % [m/s] chosen Stall speed
-Wp_g = 1200;               % [g] payload weight
+Wp_g = 800;               % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
@@ -247,7 +247,7 @@ mission.h_cruise          = 30;        % [m]
 
 mission.runwayLength_m    = 138.35;    % [m]
 mission.straightLength_m  = 140.0;     % [m]
-mission.liftoffFrac       = 0.85;      % [-]
+mission.liftoffFrac       = 0.89;      % [-]
 mission.touchdownFrac     = 1/3;       % [-]
 mission.n_turn            = 1.5;       % [-] working @ 1.2
 
@@ -343,7 +343,7 @@ sIn.n_maneuver  = mission.n_turn;        % [-]
 % Takeoff sizing from mission geometry
 sIn.use_takeoff = true;
 sIn.rho_takeoff = roh;
-sIn.TOP_m       = mission.runwayLength_m - 10;
+sIn.TOP_m       = mission.runwayLength_m;
 
 % Optional ceiling sizing
 sIn.use_ceiling   = false;
