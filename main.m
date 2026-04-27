@@ -8,19 +8,30 @@
 % paste sections to avoid mistakes
 
 % Version Evolution:
+
 % Version 1.0:   calls J(x) function
+
 % Version 1.1:   uses energyCalc(...) as a separate function
 % Version 1.2:   couples VPS to payload volume, effective L/D, and effective
 %               empty-weight fraction
+
 % Version 2.0:   includes mission profile via missionProfileCigar(mission)
+
 % Version 3.0:   introduces aero assumptions (CL, L/D, etc.)
+
 % Version 4.0:   includes propulsion sizing via propulsionAnalysis(...)
+
 % Version 5.0:   includes CTOL sizing equations via preliminarySizingCTOL(...)
+
 % Version 6.0:   includes wing geometry design variables via wingGeometryDesign(...)
+
 % Version 7.0:   integrates XFOIL airfoil analysis via airfoilAnalysisXFOIL(...)
+
 % Version 8.0:   extracts detailed airfoil parameters (Clalpha, Cm0, alphaL0,
 %               Clmax, and best L/D)
+
 % Version 9.0:   introduces spanwise twist modeling via twistFunctionPanknin(...)
+
 % Version 10.0:  adds vertical stabilizer / winglet sizing via
 %               verticalSurfaceDesign(...)
 % Version 11.0:  implements spanwise aerodynamic estimation via
@@ -39,6 +50,10 @@
 %               aircraft calcs to showcase how feasible design is.
 % Version 18.0:  Runs AVL for dynamic stability analysis.
 
+% Version 19.0: Runs AVL Control Surface Sizing Optimization
+
+% Version 20.0: Full On Profit Optimization
+
 clc; clear; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
@@ -47,7 +62,7 @@ fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timesta
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
 
-%% =================== Run Flags (edit here) =========================
+%% =================== Run Flags =========================
 % Figures
 showPlots       = false;  % true = show all figures throughout the script
 
@@ -58,9 +73,11 @@ modelCenterbody = false;  % true = include fuselage as AVL lifting surface
 
 % Long-running analyses (keep false for normal design runs)
 useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
-runCSopt        = false;  % true = CMA-ES elevon optimizer          (~10 min)
-runSweep        = false;  % true = dynamic stability parameter sweep (~5 min)
+runCSopt        = false;  % true = CMA-ES elevon optimizer          
+runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
+runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
+runProfitOpt    = true;  % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
@@ -106,9 +123,9 @@ CLmax = 0.92863;               % [-] first-pass max lift coefficient
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 26;             % [m/s] chosen cruise speed
+V_cruise = 24;             % [m/s] chosen cruise speed
 V_stall_mps = 12;   % [m/s] chosen Stall speed
-Wp_g = 800;                % [g] payload weight
+Wp_g = 1200;               % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
@@ -384,6 +401,51 @@ fprintf('Avail thrust @ turn speed     = %.3f N\n', T_avail_turn_N);
 fprintf('Avail T/W @ climb speed       = %.4f\n', TW_avail_climb);
 fprintf('Avail T/W @ turn speed        = %.4f\n', TW_avail_turn);
 
+%% =============== Monte Carlo Profit Sensitivity ==============
+% Runs early — only needs mission params and first-pass sizing estimates.
+% x0 baseline uses early-script values (Wg, LD_eff, S_ref, CLmax).
+% Re-run with runMonteCarlo=true after updating any mission parameter.
+if runMonteCarlo
+    mcIn = struct();
+
+    % ---- actual mission parameters from this run ----
+    mcIn.R_cruise_m     = R_cruise;
+    mcIn.eta_p          = eta_p;
+    mcIn.reserve_factor = reserve_factor;
+    mcIn.rho            = roh;
+    mcIn.g              = g;
+    mcIn.Vs_max_mps     = V_stall_mps;
+    mcIn.stall_margin   = 1.30;
+    mcIn.SM_min_pct     = 5.0;
+    mcIn.SM_max_pct     = 20.0;
+    mcIn.N              = 200000;
+    mcIn.showPlots      = showPlots;
+
+    % ---- exploration bounds ----
+    mcIn.bounds.W_empty_N = [8,  30];
+    mcIn.bounds.Wp_N      = [2,  15];
+    mcIn.bounds.Vp_m3     = [0.001, 0.010];
+    mcIn.bounds.V_mps     = [18,  28];
+    mcIn.bounds.LD        = [5.5, 15];
+    mcIn.bounds.Sref_m2   = [0.15, 0.70];
+    mcIn.bounds.CLmax     = [0.75, 1.20];
+    mcIn.bounds.SM_pct    = [0,   20];
+
+    % ---- local sensitivity baseline: early-script estimates ----
+    % W_empty uses parametric fe estimate; LD and CLmax are first-pass values.
+    % These update automatically when you change mission params at the top.
+    mcIn.x0.W_empty_N = We;           % [N] parametric empty weight
+    mcIn.x0.Wp_N      = Wp;           % [N] payload
+    mcIn.x0.Vp_m3     = Vp;           % [m³] cargo volume
+    mcIn.x0.V_mps     = V_cruise;     % [m/s]
+    mcIn.x0.LD        = LD_eff;       % [-] first-pass L/D estimate
+    mcIn.x0.Sref_m2   = S_ref;        % [m²] from CTOL sizing
+    mcIn.x0.CLmax     = CLmax;        % [-] first-pass CLmax
+    mcIn.x0.SM_pct    = 7.5;          % [%] target SM (AVL not run yet)
+
+    mcOut = monteCarloProfitSensitivity(mcIn);
+end
+
 %% ============== Design Lift Coefficient =================
 % Use the flight condition that should drive the twist requirement.
 % For now, use cruise / pattern speed as the design speed.
@@ -420,7 +482,7 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.1300; % optimized (CMA-ES); was 0.0822 from OnShape 4/21/2026
+wingIn.xLE_root_m = 0.0657; % SM-corrected for 161g battery + 1200g payload (was 0.0959)
 wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
@@ -464,8 +526,8 @@ fprintf('Tip LE x-location xLE_tip   = %.4f m\n\n', xLE_tip);
 fprintf('================ Airfoil Analysis (Surrogate) ================\n');
 
 % -------- User-selected root and tip airfoils --------
-airfoilRootName = 'e222.dat';
-airfoilTipName  = 'e230.dat';
+airfoilRootName = 'mh61.dat';
+airfoilTipName  = 'mh61.dat';
 
 % -------- Flow properties --------
 rho = roh;               % [kg/m^3]
@@ -930,7 +992,7 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.5, [.47, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.161, [.47, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
@@ -1483,6 +1545,38 @@ else
 end
 fprintf('=============================================================\n\n');
 
+%% =============== SM Correction Advisor ==============
+fprintf('\n================ SM CORRECTION ADVISOR =================\n');
+
+SM_target    = 7.5;   % [%] midpoint of 5-10% target band
+xNP_curr     = massOut.cg_m(1) + dynOut.SM_pct/100 * wingOut.MAC_m;
+m_batt_kg    = 0.161;
+x_batt_curr  = 0.47;
+m_no_batt_kg = massOut.mass_kg - m_batt_kg;
+x_cg_no_batt = (massOut.mass_kg*massOut.cg_m(1) - m_batt_kg*x_batt_curr) / m_no_batt_kg;
+x_cg_target  = xNP_curr - SM_target/100 * wingOut.MAC_m;
+x_batt_req   = (massOut.mass_kg*x_cg_target - m_no_batt_kg*x_cg_no_batt) / m_batt_kg;
+
+fprintf('  Current SM (AVL)             = %.2f%%\n', dynOut.SM_pct);
+fprintf('  Target SM                    = %.1f%%  (5-10%% band midpoint)\n', SM_target);
+fprintf('  Required battery x-position  = %.3f m  (fuselage = 0 to %.2f m)\n', x_batt_req, Lf);
+
+if x_batt_req >= 0 && x_batt_req <= Lf
+    fprintf('  --> Move battery to x = %.3f m  (currently %.3f m)\n', x_batt_req, x_batt_curr);
+else
+    fprintf('  *** Battery fix infeasible — 161g has too little CG authority ***\n');
+    fprintf('  --> Adjust wing x-position instead:\n');
+    % masses that translate with xLE_root: wing structure + 2 wing servos + fin structure + fin servo
+    m_wing_move_kg = m_wing_struct_kg + 0.018 + m_vert_struct_kg + 0.009;
+    f_move   = m_wing_move_kg / massOut.mass_kg;
+    % ΔSM = δ*(1 - f_move)/MAC  →  δ = ΔSM*MAC/(1-f_move)  [negative = move forward]
+    delta_xLE  = (SM_target - dynOut.SM_pct)/100 * wingOut.MAC_m / (1 - f_move);
+    xLE_target = wingIn.xLE_root_m + delta_xLE;
+    fprintf('     Set  wingIn.xLE_root_m = %.4f m  (currently %.4f m)\n', xLE_target, wingIn.xLE_root_m);
+    fprintf('     Re-run main.m to verify SM with AVL.\n');
+end
+fprintf('=========================================================\n\n');
+
 %% =============== Control Surface Sizing ==============
 csIn.CLde      = dynOut.controlDerivs.CLde;
 csIn.Cmde      = dynOut.controlDerivs.Cmde;
@@ -1499,6 +1593,16 @@ csIn.b_m       = wingOut.b_m;
 csIn.mass_kg   = massOut.mass_kg;
 csIn.Clp       = dynOut.derivatives.Clp;
 csIn.showPlots = showPlots;
+
+% elevon + rudder geometry for hinge moment calculation
+csIn.cs_chord_frac   = wingIn.cs_chord_frac;
+csIn.eta_cs_start    = wingIn.eta_cs_start;
+csIn.eta_cs_end      = wingIn.eta_cs_end;
+csIn.c_root_m        = wingOut.c_root_m;
+csIn.c_tip_m         = wingOut.c_tip_m;
+csIn.semiSpan_m      = wingOut.semiSpan_m;
+csIn.rudder_c_avg_m  = 0.5 * (vertOut.rudder.c_root_m + vertOut.rudder.c_tip_m);
+csIn.rudder_height_m = vertOut.rudder.height_m;
 
 csOut = controlSurfaceSizing(csIn);
 
@@ -1535,7 +1639,7 @@ sweepIn.twistRoot_range = [-5.0, 0.0 ];  % [deg]
 
 % Vertical fins: [lo, hi]
 sweepIn.AR_v_range    = [1.5, 6.0 ];  % [-]
-sweepIn.taperV_range  = [0.40, 0.80]; % [-]
+sweepIn.taperV_range  = [0.40, 0.80]; % [-]a
 sweepIn.sweepV_range  = [20,  45  ];  % [deg]
 
 % Wing attachment fore/aft position: slides NP aft when wing moves aft
@@ -1577,8 +1681,6 @@ if runOptimization
 end
 
 %% ============== Advanced Aerodynamics (CFD) ============
-
-%% =========== Control Surface (AVL) ================
 
 %% ============= Structure Sizing ==============
 %% ============= STRUCTURE SIZING (FINAL) ==============
@@ -1670,3 +1772,349 @@ else
 end
 
 fprintf('=====================================================\n\n');
+
+%% =============== Profit Re-evaluation with Actual Physics ==============
+fprintf('\n================ PROFIT RE-EVALUATION (Actual Physics) =================\n');
+
+% Use real aircraft values instead of early-script parametric estimates
+if perfOut.validCruise
+    LD_physics = perfOut.LDcruise;
+else
+    LD_physics = LD;
+    fprintf('  WARNING: no cruise intersection — falling back to parametric LD=%.2f\n', LD);
+end
+
+Wg_physics    = massOut.weight_N;             % [N] actual gross weight (loaded)
+Wg_no_payload = Wg_physics - Wp;             % [N] aircraft without current payload
+
+% Re-compute mission energy with actual Wg and LD
+[~, ~, Ef_phys_raw, ~, ~, ~] = energyCalc(Wg_physics, eta_p, LD_physics, delta_h, R_cruise, reserve_factor);
+Ef_physics = 20 * Ef_phys_raw;
+J_physics  = profitPerUnitTime(Wp, Vp, Ef_physics, Wg_physics, Tf);
+
+fprintf('  Parametric J (early script)  = %+.4f $/hr   [LD=%.2f, Wg=%.0fg]\n', J*3600, LD, Wg/g*1000);
+fprintf('  Physics-based J              = %+.4f $/hr   [LD=%.2f, Wg=%.0fg]\n', J_physics*3600, LD_physics, Wg_physics/g*1000);
+fprintf('  Actual cruise L/D            = %.3f\n', LD_physics);
+fprintf('  Actual gross weight          = %.1f g\n', Wg_physics/g*1000);
+
+% ---- CG / stability setup for sweep ----
+% xNP is fixed (aero surfaces don't change); derive it from current AVL SM.
+x_payload_m      = 0.3387;                              % [m] payload CG x-location (from point mass)
+m_total_kg       = massOut.mass_kg;                     % [kg]
+m_no_payload_kg  = m_total_kg - Wp/g;                   % [kg] aircraft without payload
+x_cg_total       = massOut.cg_m(1);                     % [m] current loaded CG
+x_cg_no_payload  = (m_total_kg*x_cg_total - (Wp/g)*x_payload_m) / m_no_payload_kg;  % [m]
+xNP_m            = x_cg_total + dynOut.SM_pct/100 * wingOut.MAC_m;  % [m] neutral point (fixed)
+SM_min_pct       = 5.0;   % [%] minimum acceptable static margin
+
+% ---- payload weight sweep (Vp fixed by cargo bay geometry) ----
+Wp_g_sweep = linspace(200, 1200, 120);
+J_sweep    = nan(size(Wp_g_sweep));
+Vs_sweep   = nan(size(Wp_g_sweep));
+SM_sweep   = nan(size(Wp_g_sweep));
+xCG_sweep  = nan(size(Wp_g_sweep));
+
+CLmax_3D  = aeroOut.CLmax_3D;
+S_ref_m2  = wingOut.S_ref_m2;
+MAC_m     = wingOut.MAC_m;
+
+for k = 1:length(Wp_g_sweep)
+    Wp_k   = (Wp_g_sweep(k)/1000) * g;
+    Wg_k   = Wg_no_payload + Wp_k;
+    m_k    = m_no_payload_kg + Wp_k/g;
+
+    % CG shift: payload at fixed x, rest of aircraft CG unchanged
+    x_cg_k  = (m_no_payload_kg*x_cg_no_payload + (Wp_k/g)*x_payload_m) / m_k;
+    SM_k    = (xNP_m - x_cg_k) / MAC_m * 100;
+
+    [~, ~, Ef_k, ~, ~, ~] = energyCalc(Wg_k, eta_p, LD_physics, delta_h, R_cruise, reserve_factor);
+    J_sweep(k)   = profitPerUnitTime(Wp_k, Vp, 20*Ef_k, Wg_k, Tf);
+    Vs_sweep(k)  = sqrt(2*Wg_k / (roh * S_ref_m2 * CLmax_3D));
+    SM_sweep(k)  = SM_k;
+    xCG_sweep(k) = x_cg_k;
+end
+
+% constrained optimum: best J where SM >= SM_min
+feasible = SM_sweep >= SM_min_pct;
+if any(feasible)
+    J_feasible       = J_sweep;
+    J_feasible(~feasible) = NaN;
+    [J_con, idx_con] = max(J_feasible);
+    Wp_g_con         = Wp_g_sweep(idx_con);
+    SM_con           = SM_sweep(idx_con);
+    Vs_con           = Vs_sweep(idx_con);
+else
+    J_con    = NaN;  Wp_g_con = NaN;
+    SM_con   = NaN;  Vs_con   = NaN;
+    fprintf('  *** No feasible payload weight found with SM >= %.0f%% ***\n', SM_min_pct);
+end
+
+fprintf('\n  Constrained optimum (SM>=%.0f%%) = %.0f g   (J = %.4f $/hr,  SM = %.1f%%)\n', SM_min_pct, Wp_g_con, J_con*3600, SM_con);
+fprintf('  Current payload weight        = %.0f g   (J = %.4f $/hr,  SM = %.1f%%)\n', Wp_g, J_physics*3600, dynOut.SM_pct);
+fprintf('  Stall speed at optimum        = %.2f m/s  (design limit = %.2f m/s)\n', Vs_con, V_stall_mps);
+if ~isnan(Vs_con) && Vs_con > V_stall_mps * 1.10
+    fprintf('  *** Optimal Wp raises stall speed >10%% above design — check CTOL runway length ***\n');
+end
+fprintf('=======================================================================\n\n');
+
+% ---- figure ----
+figure('Name','Profit vs Payload Weight (Actual Physics)');
+subplot(3,1,1);
+plot(Wp_g_sweep, J_sweep*3600, 'b-', 'LineWidth', 2); hold on;
+plot(Wp_g_con, J_con*3600, 'gs', 'MarkerSize', 9, 'MarkerFaceColor', 'g');
+xline(Wp_g, 'k--', sprintf(' Current %.0fg', Wp_g), 'LabelVerticalAlignment', 'bottom');
+ylabel('J  [$ / hr]'); grid on; box on;
+title(sprintf('Profit vs Payload  (LD=%.1f, aircraft base=%.0fg)', LD_physics, m_no_payload_kg*1000));
+legend('J sweep', sprintf('Optimum %.0fg (SM\\geq%.0f%%)', Wp_g_con, SM_min_pct), 'Current', 'Location', 'best');
+
+subplot(3,1,2);
+plot(Wp_g_sweep, SM_sweep, 'b-', 'LineWidth', 2); hold on;
+patch([Wp_g_sweep(1) Wp_g_sweep(end) Wp_g_sweep(end) Wp_g_sweep(1)], ...
+      [0 0 SM_min_pct SM_min_pct], 'r', 'FaceAlpha', 0.10, 'EdgeColor', 'none');
+yline(SM_min_pct, 'r--', sprintf(' SM_{min}=%.0f%%', SM_min_pct));
+xline(Wp_g, 'k--');
+plot(Wp_g_con, SM_con, 'gs', 'MarkerSize', 9, 'MarkerFaceColor', 'g');
+ylabel('Static margin [%]'); grid on; box on;
+
+subplot(3,1,3);
+plot(Wp_g_sweep, Vs_sweep, 'b-', 'LineWidth', 2); hold on;
+yline(V_stall_mps, 'r--', sprintf(' Design V_{stall}=%.1f m/s', V_stall_mps));
+xline(Wp_g, 'k--');
+plot(Wp_g_con, Vs_con, 'gs', 'MarkerSize', 9, 'MarkerFaceColor', 'g');
+xlabel('Payload weight  W_p  [g]');
+ylabel('V_{stall}  [m/s]'); grid on; box on;
+
+%% =============== Manufacturing Dimension Sheet ==============
+
+outDir = fullfile(repoRoot, 'outputs');
+if ~exist(outDir, 'dir'), mkdir(outDir); end
+mfgFile = fullfile(outDir, 'manufacturing_dimensions.txt');
+
+fid = fopen(mfgFile, 'w');
+fprintf(fid, '=================================================================\n');
+fprintf(fid, '  MAE 155B Group 2 — Manufacturing Dimension Sheet\n');
+fprintf(fid, '  Generated: %s\n', string(timestamp));
+fprintf(fid, '=================================================================\n\n');
+
+% ---- Wing planform ----
+fprintf(fid, '--- WING PLANFORM ---\n');
+fprintf(fid, '  Full span          b        = %.4f m  (%.2f in)\n', wingOut.b_m, wingOut.b_m/0.0254);
+fprintf(fid, '  Semispan           b/2      = %.4f m  (%.2f in)\n', wingOut.semiSpan_m, wingOut.semiSpan_m/0.0254);
+fprintf(fid, '  Root chord         c_root   = %.4f m  (%.2f in)\n', wingOut.c_root_m, wingOut.c_root_m/0.0254);
+fprintf(fid, '  Tip chord          c_tip    = %.4f m  (%.2f in)\n', wingOut.c_tip_m, wingOut.c_tip_m/0.0254);
+fprintf(fid, '  MAC                MAC      = %.4f m  (%.2f in)\n', wingOut.MAC_m, wingOut.MAC_m/0.0254);
+fprintf(fid, '  MAC span station   y_MAC    = %.4f m  (%.2f in) from root\n', wingOut.y_MAC_m, wingOut.y_MAC_m/0.0254);
+fprintf(fid, '  Aspect ratio       AR       = %.3f\n', wingIn.AR);
+fprintf(fid, '  Taper ratio        lambda   = %.3f\n', wingIn.taper);
+fprintf(fid, '  Quarter-chord sweep         = %.2f deg\n', wingOut.sweep_c4_deg);
+fprintf(fid, '  Leading-edge sweep          = %.2f deg\n', wingOut.sweep_LE_deg);
+fprintf(fid, '  Wing root LE x (from nose)  = %.4f m  (%.2f in)\n', wingIn.xLE_root_m, wingIn.xLE_root_m/0.0254);
+fprintf(fid, '  Wing root y (from CL)       = %.4f m  (%.2f in)\n', wingIn.y_root_m, wingIn.y_root_m/0.0254);
+fprintf(fid, '\n');
+
+% ---- Elevon ----
+eta_elev_mid  = 0.5 * (wingIn.eta_cs_start + wingIn.eta_cs_end);
+c_at_mid      = wingOut.c_root_m + (wingOut.c_tip_m - wingOut.c_root_m) * eta_elev_mid;
+c_cs_mid      = wingIn.cs_chord_frac * c_at_mid;
+y_cs_start_m  = wingIn.y_root_m + wingIn.eta_cs_start * wingOut.semiSpan_m;
+y_cs_end_m    = wingIn.y_root_m + wingIn.eta_cs_end   * wingOut.semiSpan_m;
+b_cs_m        = y_cs_end_m - y_cs_start_m;
+
+fprintf(fid, '--- ELEVON (each side) ---\n');
+fprintf(fid, '  Chord fraction              = %.3f  (%.1f%% of local chord)\n', wingIn.cs_chord_frac, wingIn.cs_chord_frac*100);
+fprintf(fid, '  Inboard  eta / y            = %.3f  /  %.4f m  (%.2f in)\n', wingIn.eta_cs_start, y_cs_start_m, y_cs_start_m/0.0254);
+fprintf(fid, '  Outboard eta / y            = %.3f  /  %.4f m  (%.2f in)\n', wingIn.eta_cs_end,   y_cs_end_m,   y_cs_end_m/0.0254);
+fprintf(fid, '  Elevon span (each side)     = %.4f m  (%.2f in)\n', b_cs_m, b_cs_m/0.0254);
+fprintf(fid, '  Chord at midspan            = %.4f m  (%.2f in)\n', c_cs_mid, c_cs_mid/0.0254);
+fprintf(fid, '\n');
+
+% ---- Vertical fin ----
+fprintf(fid, '--- VERTICAL FIN (each fin) ---\n');
+fprintf(fid, '  Span / height      b_v      = %.4f m  (%.2f in)\n', vertOut.b_v_m, vertOut.b_v_m/0.0254);
+fprintf(fid, '  Root chord         c_root   = %.4f m  (%.2f in)\n', vertOut.c_root_v_m, vertOut.c_root_v_m/0.0254);
+fprintf(fid, '  Tip chord          c_tip    = %.4f m  (%.2f in)\n', vertOut.c_tip_v_m, vertOut.c_tip_v_m/0.0254);
+fprintf(fid, '  MAC                MAC_v    = %.4f m  (%.2f in)\n', vertOut.MAC_v_m, vertOut.MAC_v_m/0.0254);
+fprintf(fid, '  Aspect ratio                = %.3f\n', vertOut.AR_v);
+fprintf(fid, '  Taper ratio                 = %.3f\n', vertOut.taper_v);
+fprintf(fid, '  Quarter-chord sweep         = %.2f deg\n', vertOut.sweep_c4_v_deg);
+fprintf(fid, '  Mount x (at wing-tip LE)    = %.4f m  (%.2f in) from nose\n', vertOut.xLE_root_v_m, vertOut.xLE_root_v_m/0.0254);
+fprintf(fid, '  Mount y (wing tip)          = %.4f m  (%.2f in) from CL\n', vertOut.y_root_v_m, vertOut.y_root_v_m/0.0254);
+fprintf(fid, '  Twin fins                   = %d\n', vertOut.isTwin);
+fprintf(fid, '\n');
+
+% ---- Rudder ----
+fprintf(fid, '--- RUDDER (each fin) ---\n');
+fprintf(fid, '  Chord fraction              = %.3f  (%.1f%%)\n', vertIn.rudder.cf_root, vertIn.rudder.cf_root*100);
+fprintf(fid, '  Height span                 = %.4f m  (%.2f in)\n', vertOut.rudder.height_m, vertOut.rudder.height_m/0.0254);
+fprintf(fid, '  Root chord                  = %.4f m  (%.2f in)\n', vertOut.rudder.c_root_m, vertOut.rudder.c_root_m/0.0254);
+fprintf(fid, '  Tip chord                   = %.4f m  (%.2f in)\n', vertOut.rudder.c_tip_m, vertOut.rudder.c_tip_m/0.0254);
+fprintf(fid, '  Area (single fin)           = %.4f m^2  (%.2f in^2)\n', vertOut.rudder.S_rudder_m2, vertOut.rudder.S_rudder_m2/0.0254^2);
+fprintf(fid, '\n');
+
+% ---- Mass and CG ----
+fprintf(fid, '--- MASS AND CG ---\n');
+fprintf(fid, '  Total mass (loaded)         = %.4f kg  (%.3f lb)\n', massOut.mass_kg, massOut.mass_kg*2.20462);
+fprintf(fid, '  Total mass (unloaded)       = %.4f kg  (%.3f lb)\n', massOut_unloaded.mass_kg, massOut_unloaded.mass_kg*2.20462);
+fprintf(fid, '  CG loaded   x (from nose)   = %.4f m  (%.2f in)\n', massOut.cg_m(1), massOut.cg_m(1)/0.0254);
+fprintf(fid, '  CG loaded   y (from CL)     = %.4f m  (%.2f in)\n', massOut.cg_m(2), massOut.cg_m(2)/0.0254);
+fprintf(fid, '  CG loaded   %% MAC           = %.2f %%\n', cg_percent_MAC);
+fprintf(fid, '  CG unloaded x (from nose)   = %.4f m  (%.2f in)\n', massOut_unloaded.cg_m(1), massOut_unloaded.cg_m(1)/0.0254);
+fprintf(fid, '\n');
+
+% ---- Performance ----
+fprintf(fid, '--- PERFORMANCE ---\n');
+fprintf(fid, '  Design cruise speed         = %.3f m/s  (%.1f mph)\n', V_cruise, V_cruise*2.23694);
+fprintf(fid, '  Stall speed (loaded)        = %.3f m/s  (%.1f mph)\n', V_stall_actual, V_stall_actual*2.23694);
+if perfOut.validCruise
+    fprintf(fid, '  Solved cruise speed         = %.3f m/s  (%.1f mph)\n', perfOut.Vcruise_mps, perfOut.Vcruise_mps*2.23694);
+end
+fprintf(fid, '  Wing loading  W/S           = %.2f N/m^2\n', massOut.weight_N / wingOut.S_ref_m2);
+fprintf(fid, '  Min turn radius (AVL)       = %.2f m\n', csOut.R_min_m);
+fprintf(fid, '  Max bank angle              = %.1f deg\n', csOut.phi_max_deg);
+fprintf(fid, '  Steady-state roll rate      = %.1f deg/s\n', csOut.p_ss_dps);
+fprintf(fid, '\n');
+
+% ---- Stability ----
+fprintf(fid, '--- STABILITY ---\n');
+fprintf(fid, '  Static margin (AVL)         = %.2f %%\n', dynOut.SM_pct);
+fprintf(fid, '  Short period: wn = %.3f rad/s,  zeta = %.3f\n', ...
+    dynOut.longModes.shortPeriod.metrics.wn, dynOut.longModes.shortPeriod.metrics.zeta);
+fprintf(fid, '  Phugoid:      wn = %.3f rad/s,  zeta = %.3f\n', ...
+    dynOut.longModes.phugoid.metrics.wn, dynOut.longModes.phugoid.metrics.zeta);
+fprintf(fid, '  Dutch roll:   wn = %.3f rad/s,  zeta = %.3f\n', ...
+    dynOut.latModes.dutchRoll.metrics.wn, dynOut.latModes.dutchRoll.metrics.zeta);
+fprintf(fid, '  Trim elevon deflection      = %.2f deg\n', csOut.delta_e_trim_deg);
+fprintf(fid, '\n');
+
+% ---- Servo check ----
+fprintf(fid, '--- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---\n');
+if ~isnan(csOut.HM_elevon_Nm)
+    if csOut.elevon_servo_ok
+        fprintf(fid, '  Elevon HM (one side) = %.4f N*m  OK  (%.0f%% of capacity)\n', ...
+            csOut.HM_elevon_Nm, 100*csOut.HM_elevon_Nm/csOut.T_sg90_Nm);
+    else
+        fprintf(fid, '  Elevon HM (one side) = %.4f N*m  *** UNDERSIZED (%.0f%% over limit) ***\n', ...
+            csOut.HM_elevon_Nm, 100*(csOut.HM_elevon_Nm/csOut.T_sg90_Nm - 1));
+    end
+    if csOut.rudder_servo_ok
+        fprintf(fid, '  Rudder HM (one fin)  = %.4f N*m  OK  (%.0f%% of capacity)\n', ...
+            csOut.HM_rudder_Nm, 100*csOut.HM_rudder_Nm/csOut.T_sg90_Nm);
+    else
+        fprintf(fid, '  Rudder HM (one fin)  = %.4f N*m  *** UNDERSIZED (%.0f%% over limit) ***\n', ...
+            csOut.HM_rudder_Nm, 100*(csOut.HM_rudder_Nm/csOut.T_sg90_Nm - 1));
+    end
+else
+    fprintf(fid, '  Hinge moment geometry not available (run full pipeline).\n');
+end
+fprintf(fid, '\n');
+
+% ---- Structure ----
+fprintf(fid, '--- STRUCTURE ---\n');
+fprintf(fid, '  Spar diameter (selected)    = %.0f mm\n', d_selected*1000);
+fprintf(fid, '  Required spar diameter      = %.2f mm\n', d_req*1000);
+fprintf(fid, '  Bending factor of safety    = %.2f\n', FoS);
+fprintf(fid, '  Max wing deflection         = %.1f mm  (%.1f%% span)\n', delta_max*1000, 100*delta_max/wingOut.b_m);
+fprintf(fid, '\n');
+
+fprintf(fid, '=================================================================\n');
+fclose(fid);
+
+fprintf('\n Manufacturing dimension sheet written to:\n   %s\n\n', mfgFile);
+
+%% =============== Full Aircraft Profit Optimization (CMA-ES) ===============
+% Toggle: set runProfitOpt = true in the Run Flags block to execute.
+% Expected runtime: 6-10 hr with default settings (parfor recommended).
+% After completion, update main.m with the printed parameter values and
+% verify SM, stall speed, and mode quality with a normal run.
+% =========================================================================
+if runProfitOpt
+
+    fprintf('\n===== FULL AIRCRAFT PROFIT OPTIMIZATION =====\n');
+    fprintf('  Building optimizer context from current pipeline outputs...\n\n');
+
+    optIn = struct();
+
+    % ---- base geometry structs (fixed fields carried into each eval) ----
+    % dynIn already has AVL paths, airfoil files, control surface fractions,
+    % rudder geometry, modelCenterbody flag — the objective function overwrites
+    % only the geometry-dependent fields per sample.
+    optIn.dynIn_base  = dynIn;
+    optIn.wingIn_base = wingIn;   % carries y_root_m, z_root_m, eta_cs_*, symmetric
+    optIn.vertIn_base = vertIn;   % carries isTwin, sizeMode, c_v, cant, toe, rudder
+
+    % ---- airfoil surrogates (re-evaluated per sample at new Re) ----
+    optIn.airfoilDB       = airfoilDB_cached;
+    optIn.airfoilRootName = airfoilRootName;
+    optIn.airfoilTipName  = airfoilTipName;
+
+    % ---- fixed mass components (indices 1-6: motor/prop/ESC/batt/rx/payload) ----
+    % WARNING: do not reorder comp(1:6) — the optimizer assumes this slice.
+    optIn.cadMass   = cadMass;
+    optIn.compFixed = comp(1:6);
+    optIn.eta_servo = eta_servo;
+
+    % ---- mission and sizing parameters ----
+    optIn.Wp_N           = Wp;
+    optIn.Wprop_N        = Wprop;
+    optIn.Vp_ref_m3      = Vp_ref;
+    optIn.fe_base        = fe;
+    optIn.ke             = ke;
+    optIn.fe_max         = fe_max;
+    optIn.eta_p          = eta_p;
+    optIn.R_cruise_m     = R_cruise;
+    optIn.delta_h_m      = delta_h;
+    optIn.reserve_factor = reserve_factor;
+    optIn.Tf_s           = Tf_measured;   % un-scaled; x20 applied inside optimizer
+    optIn.roh            = roh;
+    optIn.mu_Pas         = 1.789e-5;
+    optIn.g              = g;
+
+    % ---- drag build-up: fuselage Swet scales with Vp^(2/3) ----
+    optIn.Swet_fuse_m2 = Swet_fuse;   % [m²] reference at current Vp
+    optIn.Vp_m3_base   = Vp;          % [m³] reference Vp for Swet_fuse scaling
+    optIn.Lf_m = Lf;   optIn.Wf_m = Wf;   optIn.Hf_m = Hf;   % form factor dims stay fixed
+    optIn.tc = tc;     optIn.xc = xc;
+    optIn.Q_wing = Q_wing;   optIn.Q_fuse = Q_fuse;   optIn.Q_fin = Q_fin;
+
+    % ---- structural mass references for scaling ----
+    % Wing mass scales as S_ref * sqrt(AR) relative to these baseline values.
+    % Fin mass scales linearly with total fin wetted area.
+    optIn.m_wing_struct_ref_kg = m_wing_struct_kg;
+    optIn.m_vert_struct_ref_kg = m_vert_struct_kg;
+    optIn.S_ref_base_m2        = S_ref;
+    optIn.AR_base              = AR;
+    optIn.S_fin_base_m2        = vertOut.S_v_total_m2;
+
+    % ---- physical constraints ----
+    optIn.SM_min_pct      = 5.0;    % [%]   static margin lower bound
+    optIn.SM_max_pct      = 20.0;   % [%]   static margin upper bound
+    optIn.Vs_max_mps      = 12.0;   % [m/s] stall speed limit
+    optIn.b_max_m         = 2.5;    % [m]   wingspan limit (current design ~2.0-2.3 m)
+    optIn.c_tip_min_m     = 0.05;   % [m]   minimum buildable tip chord
+    optIn.b_v_max_frac    = 0.50;   % [-]   fin height / semispan limit
+    optIn.de_trim_max_deg = 15.0;   % [deg] max trim elevon deflection
+    optIn.Vs_margin_fac   = 1.30;   % [-]   V_cruise / Vs minimum ratio
+    optIn.Wg_max_N        = 60.0;   % [N]   gross weight hard cap
+
+    % ---- initial guess: current design values ----
+    optIn.x0 = [AR; wingTapper; wingSweep; twistOut.twist_root_deg; WS_design; ...
+                wingIn.xLE_root_m; vertIn.AR_v; vertIn.taper_v; vertIn.sweep_c4_v_deg; ...
+                V_cruise; Vp];
+
+    % ---- CMA-ES settings ----
+    % lambda=0 uses 2x Hansen default (≈22 for n=11).
+    % For shorter test runs, reduce maxGen (e.g. 50 for a ~20-min smoke test).
+    optIn.sigma0   = 0.15;   % initial step in normalized [0,1] space
+    optIn.maxGen   = 200;    % increase to 500 for thorough run
+    optIn.lambda   = 0;      % 2× Hansen default ≈ 22 for n=11
+    optIn.verbose  = 10;
+    optIn.debugObj = false;
+
+    optProfOut = profitOptimization(optIn);
+
+    % Save result to outputs/ for later reference
+    optSaveFile = fullfile(repoRoot, 'outputs', 'profit_opt_result.mat');
+    save(optSaveFile, 'optProfOut', 'optIn');
+    fprintf('  Optimization result saved to:\n   %s\n\n', optSaveFile);
+
+end

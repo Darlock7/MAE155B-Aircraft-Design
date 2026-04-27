@@ -24,6 +24,14 @@ function csOut = controlSurfaceSizing(csIn)
 %   .delta_a_max [deg]   max aileron deflection (default 20)
 %   .delta_r_max [deg]   max rudder deflection (default 25)
 %   .showPlots   bool    generate turn-radius plot
+%   .cs_chord_frac   [-]   elevon chord / total chord      (optional, for hinge moment)
+%   .eta_cs_start    [-]   elevon inboard span fraction    (optional)
+%   .eta_cs_end      [-]   elevon outboard span fraction   (optional)
+%   .c_root_m        [m]   wing root chord                 (optional)
+%   .c_tip_m         [m]   wing tip chord                  (optional)
+%   .semiSpan_m      [m]   wing semispan                   (optional)
+%   .rudder_c_avg_m  [m]   rudder average chord            (optional)
+%   .rudder_height_m [m]   rudder span / height            (optional)
 %
 % Outputs (csOut struct):
 %   .delta_e_trim_deg  [deg]   trim elevon deflection
@@ -34,6 +42,11 @@ function csOut = controlSurfaceSizing(csIn)
 %   .R_m               [m]     turn radius array
 %   .delta_e_deg       [deg]   required elevon at each bank angle
 %   .p_ss_dps          [°/s]   steady-state roll rate at delta_a_max
+%   .HM_elevon_Nm      [N·m]   elevon hinge moment, one side, at delta_e_max
+%   .HM_rudder_Nm      [N·m]   rudder hinge moment, one fin,  at delta_r_max
+%   .T_sg90_Nm         [N·m]   SG90 stall torque reference (0.177 N·m)
+%   .elevon_servo_ok   bool    true if SG90 can drive elevon
+%   .rudder_servo_ok   bool    true if SG90 can drive rudder
 
     if ~isfield(csIn,'delta_e_max'), csIn.delta_e_max = 20;    end
     if ~isfield(csIn,'delta_a_max'), csIn.delta_a_max = 20;    end
@@ -57,6 +70,11 @@ function csOut = controlSurfaceSizing(csIn)
     da_max  = csIn.delta_a_max;
     dr_max  = csIn.delta_r_max;
     g       = 9.81;
+
+    hasHingeGeom = isfield(csIn,'cs_chord_frac') && isfield(csIn,'c_root_m') && ...
+                   isfield(csIn,'c_tip_m')        && isfield(csIn,'semiSpan_m') && ...
+                   isfield(csIn,'eta_cs_start')   && isfield(csIn,'eta_cs_end') && ...
+                   isfield(csIn,'rudder_c_avg_m') && isfield(csIn,'rudder_height_m');
 
     % ---- trim elevon deflection ----
     % Cm0 + Cmde * de_trim = 0
@@ -98,6 +116,39 @@ function csOut = controlSurfaceSizing(csIn)
     qbar   = 0.5 * rho * V^2;
     N_rud  = Cn_rud * qbar * S * b;   % [N·m] yaw moment at max rudder
 
+    % ---- hinge moments vs SG90 servo (1.8 kg*cm = 0.177 N*m at 4.8V) ----
+    T_sg90_Nm       = 0.177;
+    HM_elevon_Nm    = NaN;
+    HM_rudder_Nm    = NaN;
+    elevon_servo_ok = NaN;
+    rudder_servo_ok = NaN;
+
+    if hasHingeGeom
+        % Plain trailing-edge flap: |Ch_delta| ~ 0.50 /rad (first-pass estimate;
+        % thin-airfoil theory gives ~0.45-0.75 depending on cf and airfoil shape)
+        Ch_delta = 0.50;
+        de_rad   = de_max * pi/180;
+        dr_rad   = dr_max * pi/180;
+
+        % elevon chord at inboard and outboard eta, then average
+        c_cs_s   = csIn.cs_chord_frac * (csIn.c_root_m + ...
+                   (csIn.c_tip_m - csIn.c_root_m) * csIn.eta_cs_start);
+        c_cs_e   = csIn.cs_chord_frac * (csIn.c_root_m + ...
+                   (csIn.c_tip_m - csIn.c_root_m) * csIn.eta_cs_end);
+        c_cs_avg = 0.5 * (c_cs_s + c_cs_e);
+        b_cs     = (csIn.eta_cs_end - csIn.eta_cs_start) * csIn.semiSpan_m;
+        S_cs     = b_cs * c_cs_avg;   % planform area, one side
+        HM_elevon_Nm    = Ch_delta * de_rad * qbar * S_cs * c_cs_avg;
+        elevon_servo_ok = HM_elevon_Nm <= T_sg90_Nm;
+
+        % rudder (one fin)
+        c_rud_avg = csIn.rudder_c_avg_m;
+        b_rud     = csIn.rudder_height_m;
+        S_rud     = b_rud * c_rud_avg;
+        HM_rudder_Nm    = Ch_delta * dr_rad * qbar * S_rud * c_rud_avg;
+        rudder_servo_ok = HM_rudder_Nm <= T_sg90_Nm;
+    end
+
     % ---- print ----
     fprintf('\n============= CONTROL SURFACE SIZING ================\n');
     fprintf('--- Elevon (pitch / roll) ---\n');
@@ -113,6 +164,23 @@ function csOut = controlSurfaceSizing(csIn)
     fprintf('--- Rudder ---\n');
     fprintf('  Max yaw moment           = %.4f N*m  (at dr=%.0f deg)\n', N_rud, dr_max);
     fprintf('  Cndr (per deg)           = %.6f\n', Cndr);
+    if hasHingeGeom
+        fprintf('--- Hinge Moments vs SG90 (%.3f N*m at 4.8V) ---\n', T_sg90_Nm);
+        fprintf('  Elevon HM (one side)     = %.4f N*m  (de_max=%.0f deg)\n', HM_elevon_Nm, de_max);
+        if elevon_servo_ok
+            fprintf('  Elevon servo             = OK  (%.0f%% of SG90 capacity)\n', 100*HM_elevon_Nm/T_sg90_Nm);
+        else
+            fprintf('  *** ELEVON SERVO UNDERSIZED (%.0f%% over limit) ***\n', ...
+                100*(HM_elevon_Nm/T_sg90_Nm - 1));
+        end
+        fprintf('  Rudder HM (one fin)      = %.4f N*m  (dr_max=%.0f deg)\n', HM_rudder_Nm, dr_max);
+        if rudder_servo_ok
+            fprintf('  Rudder servo             = OK  (%.0f%% of SG90 capacity)\n', 100*HM_rudder_Nm/T_sg90_Nm);
+        else
+            fprintf('  *** RUDDER SERVO UNDERSIZED (%.0f%% over limit) ***\n', ...
+                100*(HM_rudder_Nm/T_sg90_Nm - 1));
+        end
+    end
     fprintf('======================================================\n\n');
 
     % ---- turn radius plot ----
@@ -140,4 +208,9 @@ function csOut = controlSurfaceSizing(csIn)
     csOut.p_ss_dps         = p_ss_dps;
     csOut.N_rud_Nm         = N_rud;
     csOut.limited_by       = limited_by;
+    csOut.HM_elevon_Nm     = HM_elevon_Nm;
+    csOut.HM_rudder_Nm     = HM_rudder_Nm;
+    csOut.T_sg90_Nm        = T_sg90_Nm;
+    csOut.elevon_servo_ok  = elevon_servo_ok;
+    csOut.rudder_servo_ok  = rudder_servo_ok;
 end
