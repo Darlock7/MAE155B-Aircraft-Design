@@ -67,9 +67,9 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;  % true = open AVL 3D viewer before stability run
+viewGeometry    = false;   % true = open AVL 3D viewer before stability run
 modelCenterbody = false;  % true = include fuselage as AVL lifting surface
-                          %        (flat-plate model overestimates lift — keep false)
+                       %        (flat-plate model overestimates lift — keep false)
 
 % Long-running analyses (keep false for normal design runs)
 useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
@@ -77,7 +77,7 @@ runCSopt        = false;  % true = CMA-ES elevon optimizer
 runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
-runProfitOpt    = true;  % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
+runProfitOpt    = false;  % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
@@ -107,7 +107,7 @@ fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
 %   Vp = 0.010 m^3  --> VPS = 10
 
 Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
-Vp     = 0.0029;            % [m^3] actual payload 
+Vp     = 0.0150;            % [m^3] CMA-ES optimal (was 0.0060)
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
 % -------- Empty-weight penalty model for package volume --------
@@ -123,16 +123,16 @@ CLmax = 0.92863;               % [-] first-pass max lift coefficient
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 24;             % [m/s] chosen cruise speed
+V_cruise = 20.0;           % [m/s] CMA-ES optimal (was 24)
 V_stall_mps = 12;   % [m/s] chosen Stall speed
 Wp_g = 1200;               % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 8.5;           % [-] first-pass flying-wing assumption
-wingTapper  = 0.702;       % [-]  optimized (CMA-ES)
-wingSweep   = 22.7;        % [deg] quarter-chord sweep  optimized (CMA-ES)
+AR          = 6.830;         % [-] CMA-ES optimal (was 7.449)
+wingTapper  = 0.300;         % [-] CMA-ES optimal (was 0.702)
+wingSweep   = 30.0;          % [deg] CMA-ES optimal (was 22.7)
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
@@ -482,7 +482,7 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0657; % SM-corrected for 161g battery + 1200g payload (was 0.0959)
+wingIn.xLE_root_m = 0.0300; % CMA-ES optimal (was 0.0657)
 wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
 wingIn.z_root_m   = 0.0;
 
@@ -679,7 +679,7 @@ twistIn.static_margin  = 0.1153;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 0.0;
+twistIn.twist_root_deg = 2.35;  % CMA-ES optimal (was 2.37)
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -742,9 +742,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 2.41;  % optimized (CMA-ES)
-vertIn.taper_v        = 0.400; % optimized (CMA-ES)
-vertIn.sweep_c4_v_deg = 40.7;  % optimized (CMA-ES)
+vertIn.AR_v           = 2.219; % CMA-ES optimal (was 1.500)
+vertIn.taper_v        = 0.415; % CMA-ES optimal (was 0.300)
+vertIn.sweep_c4_v_deg = 49.7;  % CMA-ES optimal (was 35.4)
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
