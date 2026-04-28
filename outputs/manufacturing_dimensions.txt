@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-27 22:00:39
+  Generated: 2026-04-27 22:51:08
 =================================================================
 
 --- WING PLANFORM ---
@@ -54,18 +54,18 @@
 --- PERFORMANCE ---
   Design cruise speed         = 20.000 m/s  (44.7 mph)
   Stall speed (loaded)        = 10.595 m/s  (23.7 mph)
-  Solved cruise speed         = 25.832 m/s  (57.8 mph)
+  Solved cruise speed         = 25.458 m/s  (56.9 mph)
   Wing loading  W/S           = 61.45 N/m^2
   Min turn radius (AVL)       = 0.00 m
   Max bank angle              = 0.0 deg
-  Steady-state roll rate      = 241.1 deg/s
+  Steady-state roll rate      = 241.2 deg/s
 
 --- STABILITY ---
-  Static margin (AVL)         = 30.17 %
+  Static margin (AVL)         = 30.73 %
   Short period: wn = NaN rad/s,  zeta = NaN
-  Phugoid:      wn = 21.940 rad/s,  zeta = 0.436
-  Dutch roll:   wn = 12.591 rad/s,  zeta = 0.249
-  Trim elevon deflection      = 29.47 deg
+  Phugoid:      wn = 22.451 rad/s,  zeta = 0.470
+  Dutch roll:   wn = 12.586 rad/s,  zeta = 0.251
+  Trim elevon deflection      = 31.00 deg
 
 --- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---
   Elevon HM (one side) = 0.1380 N*m  OK  (78% of capacity)

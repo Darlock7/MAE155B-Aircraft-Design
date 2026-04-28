@@ -67,7 +67,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = true;   % true = open AVL 3D viewer before stability run
+viewGeometry    = false;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -75,7 +75,7 @@ modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95
 useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
 runCSopt        = false;  % true = CMA-ES elevon optimizer          
 runSweep        = false;  % true = dynamic stability parameter sweep 
-runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
+runOptimization = true;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
 runProfitOpt    = false;  % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
@@ -141,8 +141,8 @@ wingSweep   = 30;          % [deg] CMA-ES optimal (was 29.9)
 CD0_user = CD0;            % [-]
 
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.6328;                   % [m] body length — CMA-ES optimal (was 0.6406)
-Wf = 0.2342;                   % [m] max body width — CMA-ES optimal (2 × 0.1171)
+Lf = 0.88427932;                   % [m] body length — CMA-ES optimal (was 0.6406)
+Wf = 0.28000000;                   % [m] max body width — CMA-ES optimal (2 × 0.1171)
 
 % ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
 Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
@@ -1470,11 +1470,11 @@ dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 % Actual airfoil dat files (AVL reads camber directly; AInc = geometric twist only)
 dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', airfoilRootName);
 dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', airfoilTipName);
-dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'mh95.dat');
+dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'eh2012.dat');
 
 % Centerbody geometry: fixed fuselage, wing slides fwd/aft via xLE_root
 dynIn.cb_chord_m = Lf;     % [m] centerbody chord at centerline (= fuselage length)
-dynIn.cb_z_m     = 0.014;  % [m] centerbody LE height above wing plane
+dynIn.cb_z_m     = 0.03;  % [m] centerbody LE height above wing plane
 dynIn.cb_xLE_m   = 0.0;    % [m] nose at origin
 
 % Flight condition
@@ -1640,17 +1640,17 @@ sweepIn.dynIn   = dynIn;
 sweepIn.maxIter = 50;
 
 % Wing: [lo, hi]
-sweepIn.wingSweep_range = [20,   40 ];   % [deg]
+sweepIn.wingSweep_range = [0,   40 ];   % [deg]
 sweepIn.wingTaper_range = [0.60, 1.00];  % [-]
-sweepIn.twistRoot_range = [-5.0, 0.0 ];  % [deg]
+sweepIn.twistRoot_range = [0.0, 0.0 ];  % [deg]
 
 % Vertical fins: [lo, hi]
-sweepIn.AR_v_range    = [1.5, 6.0 ];  % [-]
-sweepIn.taperV_range  = [0.40, 0.80]; % [-]a
+sweepIn.AR_v_range    = [1.5, 2.0 ];  % [-]
+sweepIn.taperV_range  = [0.10, 1.00]; % [-]a
 sweepIn.sweepV_range  = [20,  45  ];  % [deg]
 
 % Wing attachment fore/aft position: slides NP aft when wing moves aft
-sweepIn.xLE_root_range = [0.05, 0.20];  % [m]  baseline is 0.0822 m
+sweepIn.xLE_root_range = [0.05, 0.30];  % [m]  baseline is 0.0822 m
 
 % Mass inputs — fixed components + scalars for geometry-dependent rebuild
 sweepIn.cadMass          = cadMass;
