@@ -986,7 +986,7 @@ cadMass.fuselageOnly.Icg_kgm2 =  [ ...
 comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 
 
-% NOTE: makePointMass(name, mass_kg, [x, y, z])
+% NOTE: makePointMass(name, mass_kg, [x, y, z]) add accurate mass values 
 
 % ---- Main propulsion ----
 comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
