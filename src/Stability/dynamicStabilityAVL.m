@@ -117,6 +117,15 @@ function dynOut = dynamicStabilityAVL(dynIn)
     if isfield(dynIn,'airfoilTipFile'),      airfoilTipFile  = dynIn.airfoilTipFile;  end
     if isfield(dynIn,'airfoilFuselageFile'), airfoilFusFile  = dynIn.airfoilFuselageFile; end
 
+    % Centerbody geometry: spans y=0 (centerline) to y=y_root (wing gap half-width)
+    % Wing xLE_root slides fwd/aft; centerbody stays fixed at x=cb_xLE_m
+    cb_chord_m = 0.5199;  % [m] centerbody chord at centerline (default from CAD)
+    cb_z_m     = 0.014;   % [m] centerbody LE height above wing plane at centerline
+    cb_xLE_m   = 0.0;     % [m] centerbody nose at origin
+    if isfield(dynIn,'cb_chord_m'), cb_chord_m = dynIn.cb_chord_m; end
+    if isfield(dynIn,'cb_z_m'),     cb_z_m     = dynIn.cb_z_m;     end
+    if isfield(dynIn,'cb_xLE_m'),   cb_xLE_m   = dynIn.cb_xLE_m;   end
+
     avlExe    = string(dynIn.avlExe);
     baseDir   = string(dynIn.workDir);
     doPlot    = dynIn.plotModes;
@@ -153,7 +162,8 @@ function dynOut = dynamicStabilityAVL(dynIn)
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
         rud_e0, rud_e1, rud_cf, ...
-        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile);
+        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile, ...
+        cb_chord_m, cb_z_m, cb_xLE_m);
 
     %% ===== STEP 1b: OPTIONAL GEOMETRY VIEWER =====
     % Launches AVL interactively (no stdin pipe) so you can use the G command.
@@ -529,7 +539,8 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
         xLE_rv, y_rv, z_rv, xLE_tv, y_tv, z_tv, ...
         xLE_bv, y_bv, z_bv, c_rv, c_tv, ...
         rud_e0, rud_e1, rud_cf, ...
-        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile)
+        doFuselage, airfoilRootFile, airfoilTipFile, airfoilFusFile, ...
+        cb_chord_m, cb_z_m, cb_xLE_m)
 
     Xcg = cg(1);  Ycg = cg(2);  Zcg = cg(3);
 
@@ -613,19 +624,20 @@ function write_geom(fname, cg, Sref, Cref, Bref, Mach, ...
     fprintf(fid,"0.0\n\n");
 
     if doFuselage
-        fprintf(fid,"! CENTERBODY  EH0009 fuselage airfoil  AInc=%.4f deg (matches wing root)\n", AInc0);
+        % Centerbody: rectangular box planform from y=0 to y=y_root.
+        % Both sections share the same xLE and chord — no taper, no sweep.
+        % The wing attaches at y=y_root as a separate surface; they are independent.
+        fprintf(fid,"! CENTERBODY  MH95 reflexed  xLE=%.4f m  chord=%.4f m  z=%.4f m  AInc=%.4f deg\n", ...
+            cb_xLE_m, cb_chord_m, cb_z_m, AInc0);
         fprintf(fid,"SURFACE\nCenterbody\n");
         fprintf(fid,"10 1.0  8 1.0\n");
         fprintf(fid,"YDUPLICATE\n0.0\n\n");
         fprintf(fid,"SECTION\n");
-        fprintf(fid,"  0.000000   0.000000   0.014000   0.519900   %.6f\n", AInc0);
+        fprintf(fid,"  %-10.6f   0.000000   %-10.6f   %-10.6f   %.6f\n", cb_xLE_m, cb_z_m, cb_chord_m, AInc0);
         fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
         fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
-        % CAD has an intermediate section at Y=0.070 (LE=0.041, chord=0.4789) but it
-        % creates a TE kink (TE flat 0→0.070, then drops 23cm to wing root at 0.145).
-        % Removed here; AVL linearly interpolates centerline→wing root without the spike.
         fprintf(fid,"SECTION\n");
-        fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", xw0, y0, cw0, AInc0);
+        fprintf(fid,"  %-10.6f   %-10.6f   0.000000   %-10.6f   %.6f\n", cb_xLE_m, y0, cb_chord_m, AInc0);
         fprintf(fid,"AFILE\n%s\n", airfoilFusFile);
         fprintf(fid,"CLAF\n%.4f\n\n", Claf0);
     end

@@ -64,11 +64,11 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = true;  % true = show all figures throughout the script
+showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
 viewGeometry    = true;   % true = open AVL 3D viewer before stability run
-modelCenterbody = false;  % true = include fuselage as AVL lifting surface
+modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
 % Long-running analyses (keep false for normal design runs)
@@ -107,7 +107,7 @@ fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
 %   Vp = 0.010 m^3  --> VPS = 10
 
 Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
-Vp     = 0.00387150010324;            % [m^3] CMA-ES optimal (was 0.0060)
+Vp     = 0.01500000000000;            % [m^3] CMA-ES optimal (was 0.0039)
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
 % -------- Empty-weight penalty model for package volume --------
@@ -130,9 +130,9 @@ Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 6.830;         % [-] CMA-ES optimal (was 7.449)
-wingTapper  = 0.300;         % [-] CMA-ES optimal (was 0.702)
-wingSweep   = 30.0;          % [deg] CMA-ES optimal (was 22.7)
+AR          = 4.508;         % [-] CMA-ES optimal (was 6.063)
+wingTapper  = 0.300;         % [-] CMA-ES optimal (was 0.302)
+wingSweep   = 29.4;          % [deg] CMA-ES optimal (was 29.9)
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
@@ -140,14 +140,14 @@ wingSweep   = 30.0;          % [deg] CMA-ES optimal (was 22.7)
 % ---- fallback parasite drag if not using build-up ----
 CD0_user = CD0;            % [-]
 
-% ---- wetted areas ----
-Swet_wing = 0.64897702;        % [m^2] total wing wetted area
-Swet_fuse = 0.21672003;        % [m^2] centerbody / fuselage wetted area
-Swet_fin  = 0.14780168;        % [m^2] total wetted area of both fins
-
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.62000000;               % [m] body length
-Wf = 0.16635000;               % [m] max body width
+Lf = 0.6328;                   % [m] body length — CMA-ES optimal (was 0.6406)
+Wf = 0.2342;                   % [m] max body width — CMA-ES optimal (2 × 0.1171)
+
+% ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
+Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
+Swet_fuse = 0.21672003 * (Lf * Wf) / (0.620 * 0.290);  % [m^2] scales with fuselage box area
+Swet_fin  = 0.14780168;        % [m^2] placeholder — overwritten after verticalSurfaceDesign
 Hf = 0.10145110;               % [m] max body height
 
 % ---- wing / fin form-factor settings ----
@@ -351,7 +351,7 @@ sIn.V_ceiling_mps = mission.V_pattern;
 
 % Plot / search domain
 sIn.WS_min = 1;
-sIn.WS_max = 150;
+sIn.WS_max = 90;
 sIn.Npts   = 500;
 
 % Design buffers
@@ -417,7 +417,7 @@ if runMonteCarlo
     mcIn.Vs_max_mps     = V_stall_mps;
     mcIn.stall_margin   = 1.30;
     mcIn.SM_min_pct     = 5.0;
-    mcIn.SM_max_pct     = 20.0;
+    mcIn.SM_max_pct     = 13.0;
     mcIn.N              = 200000;
     mcIn.showPlots      = showPlots;
 
@@ -482,8 +482,8 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0300; % CMA-ES optimal (was 0.0657)
-wingIn.y_root_m   = 0.145; % Imported from OnShape 4/20/2026
+wingIn.xLE_root_m = 0.1138; % CMA-ES optimal (was 0.1223)
+wingIn.y_root_m   = 0.1171; % CMA-ES optimal (was 0.1155)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
@@ -492,6 +492,7 @@ wingIn.eta_cs_end    = 0.749;   % ends at 74.9% semispan
 wingIn.cs_chord_frac = 0.450;   % 45% of local chord
 
 wingOut = wingGeometryDesign(wingIn);
+Swet_wing = 2.04 * wingOut.S_ref_m2;  % overwrite placeholder above
 
 % Useful outputs
 b            = wingOut.b_m;
@@ -679,7 +680,7 @@ twistIn.static_margin  = 0.1153;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 2.35;  % CMA-ES optimal (was 2.37)
+twistIn.twist_root_deg = 3.00;  % CMA-ES optimal (was 2.35)
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -742,9 +743,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 2.219; % CMA-ES optimal (was 1.500)
-vertIn.taper_v        = 0.415; % CMA-ES optimal (was 0.300)
-vertIn.sweep_c4_v_deg = 49.7;  % CMA-ES optimal (was 35.4)
+vertIn.AR_v           = 2.015; % CMA-ES optimal (was 3.187)
+vertIn.taper_v        = 0.700; % CMA-ES optimal (was 0.458)
+vertIn.sweep_c4_v_deg = 50.0;  % CMA-ES optimal (was 46.9)
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
@@ -769,6 +770,7 @@ vertIn.rudder.cf_tip      = 0.500;
 
 % Run function
 vertOut = verticalSurfaceDesign(vertIn);
+Swet_fin = 2.04 * vertOut.S_v_total_m2;  % overwrite placeholder above
 
 % -------- Extract outputs --------
 b_v        = vertOut.b_v_m;
@@ -1466,9 +1468,14 @@ dynIn.Cla_root_per_deg = airfoilOut.root.Cla_per_deg;
 dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 
 % Actual airfoil dat files (AVL reads camber directly; AInc = geometric twist only)
-dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', 'e222.dat');
-dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', 'e230.dat');
-dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'eh0009.dat');
+dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', airfoilRootName);
+dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', airfoilTipName);
+dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'mh95.dat');
+
+% Centerbody geometry: fixed fuselage, wing slides fwd/aft via xLE_root
+dynIn.cb_chord_m = Lf;     % [m] centerbody chord at centerline (= fuselage length)
+dynIn.cb_z_m     = 0.014;  % [m] centerbody LE height above wing plane
+dynIn.cb_xLE_m   = 0.0;    % [m] nose at origin
 
 % Flight condition
 dynIn.V_mps         = V_cruise;
@@ -1776,13 +1783,8 @@ fprintf('=====================================================\n\n');
 %% =============== Profit Re-evaluation with Actual Physics ==============
 fprintf('\n================ PROFIT RE-EVALUATION (Actual Physics) =================\n');
 
-% Use real aircraft values instead of early-script parametric estimates
-if perfOut.validCruise
-    LD_physics = perfOut.LDcruise;
-else
-    LD_physics = LD;
-    fprintf('  WARNING: no cruise intersection — falling back to parametric LD=%.2f\n', LD);
-end
+% Use drag-polar L/D (consistent with optimizer) rather than perfOut.LDcruise
+LD_physics = aeroOut.LD_cruise;
 
 Wg_physics    = massOut.weight_N;             % [N] actual gross weight (loaded)
 Wg_no_payload = Wg_physics - Wp;             % [N] aircraft without current payload
@@ -2049,9 +2051,10 @@ if runProfitOpt
 
     % ---- fixed mass components (indices 1-6: motor/prop/ESC/batt/rx/payload) ----
     % WARNING: do not reorder comp(1:6) — the optimizer assumes this slice.
-    optIn.cadMass   = cadMass;
-    optIn.compFixed = comp(1:6);
-    optIn.eta_servo = eta_servo;
+    optIn.cadMass        = cadMass;
+    optIn.m_fuse_ref_kg  = cadMass.fuselageOnly.mass_kg;
+    optIn.compFixed      = comp(1:6);
+    optIn.eta_servo      = eta_servo;
 
     % ---- mission and sizing parameters ----
     optIn.Wp_N           = Wp;
@@ -2087,7 +2090,7 @@ if runProfitOpt
 
     % ---- physical constraints ----
     optIn.SM_min_pct      = 5.0;    % [%]   static margin lower bound
-    optIn.SM_max_pct      = 20.0;   % [%]   static margin upper bound
+    optIn.SM_max_pct      = 13.0;   % [%]   static margin upper bound
     optIn.Vs_max_mps      = 12.0;   % [m/s] stall speed limit
     optIn.b_max_m         = 2.5;    % [m]   wingspan limit (current design ~2.0-2.3 m)
     optIn.c_tip_min_m     = 0.05;   % [m]   minimum buildable tip chord
@@ -2099,10 +2102,10 @@ if runProfitOpt
     % ---- initial guess: current design values ----
     optIn.x0 = [AR; wingTapper; wingSweep; twistOut.twist_root_deg; WS_design; ...
                 wingIn.xLE_root_m; vertIn.AR_v; vertIn.taper_v; vertIn.sweep_c4_v_deg; ...
-                V_cruise; Vp];
+                V_cruise; Vp; wingIn.y_root_m; Lf];
 
     % ---- CMA-ES settings ----
-    % lambda=0 uses 2x Hansen default (≈22 for n=11).
+    % lambda=0 uses 2x Hansen default (≈26 for n=13).
     % For shorter test runs, reduce maxGen (e.g. 50 for a ~20-min smoke test).
     optIn.sigma0   = 0.15;   % initial step in normalized [0,1] space
     optIn.maxGen   = 200;    % increase to 500 for thorough run

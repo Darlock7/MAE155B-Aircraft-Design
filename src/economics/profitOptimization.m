@@ -96,9 +96,10 @@ function optOut = profitOptimization(optIn)
 %   .history      struct array per generation
 
     % ---- physical bounds ----
-    lb = [4.0;  0.30;  0.0; -5.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001];
-    ub = [10.0; 0.80; 30.0;  3.0; 90.0; 0.150; 3.50; 0.70; 50.0; 28.0; 0.015];
-    x0_def = [8.5; 0.702; 22.7; 0.0; 40.0; 0.0657; 2.41; 0.400; 40.7; 24.0; 0.0060];
+    %           AR    tap   swp   twst  WS    xLE   ARv  tapv  swpv  Vc    Vp    cb_hw  cb_len
+    lb = [4.0; 0.30;  0.0; -5.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
+    ub = [10.0; 0.80; 30.0; 3.0; 90.0; 0.300; 3.50; 0.70; 50.0; 28.0; 0.015; 0.300; 1.000];
+    x0_def = [8.5; 0.702; 22.7; 0.0; 40.0; 0.100; 2.41; 0.400; 40.7; 24.0; 0.0060; 0.145; 0.620];
 
     if ~isfield(optIn,'x0'),              optIn.x0              = x0_def;  end
     if ~isfield(optIn,'sigma0'),          optIn.sigma0          = 0.15;    end
@@ -108,7 +109,7 @@ function optOut = profitOptimization(optIn)
     if ~isfield(optIn,'tolFun'),          optIn.tolFun          = 1e-6;    end
     if ~isfield(optIn,'verbose'),         optIn.verbose         = 10;      end
     if ~isfield(optIn,'SM_min_pct'),      optIn.SM_min_pct      = 5.0;     end
-    if ~isfield(optIn,'SM_max_pct'),      optIn.SM_max_pct      = 20.0;    end
+    if ~isfield(optIn,'SM_max_pct'),      optIn.SM_max_pct      = 13.0;    end
     if ~isfield(optIn,'Vs_max_mps'),      optIn.Vs_max_mps      = 12.0;    end
     if ~isfield(optIn,'b_max_m'),         optIn.b_max_m         = 1.8;     end
     if ~isfield(optIn,'c_tip_min_m'),     optIn.c_tip_min_m     = 0.05;    end
@@ -118,7 +119,7 @@ function optOut = profitOptimization(optIn)
     if ~isfield(optIn,'Wg_max_N'),        optIn.Wg_max_N        = 60.0;    end
     if ~isfield(optIn,'debugObj'),        optIn.debugObj        = false;   end
 
-    n = 11;
+    n = numel(lb);
 
     % normalize initial guess to [0,1]
     x0_norm = (optIn.x0(:) - lb) ./ (ub - lb);
@@ -156,7 +157,8 @@ function optOut = profitOptimization(optIn)
     xBest_norm = m;
     infoBest   = struct('J_hr',NaN,'SM_pct',NaN,'Vs_mps',NaN,'LD',NaN, ...
                         'Wg_g',NaN,'b_m',NaN,'AR',NaN,'S_ref',NaN, ...
-                        'Vp_L',NaN,'V_cruise',NaN,'failed',true);
+                        'Vp_L',NaN,'V_cruise',NaN, ...
+                        'cb_halfwidth_m',NaN,'cb_length_m',NaN,'failed',true);
     history    = struct('gen',{},'JBest',{},'sigma',{},'J_hr',{},'SM_pct',{},'Vs_mps',{});
 
     ctx    = optIn;
@@ -239,7 +241,8 @@ function optOut = profitOptimization(optIn)
     xBest = lb + xBest_norm .* (ub - lb);
 
     varNames = {'AR','Taper','Sweep c/4 [deg]','Root twist [deg]','WS [N/m²]', ...
-                'xLE_root [m]','AR_v','Taper_v','Sweep_v [deg]','V_cruise [m/s]','Vp [m³]'};
+                'xLE_root [m]','AR_v','Taper_v','Sweep_v [deg]','V_cruise [m/s]','Vp [m³]', ...
+                'cb_halfwidth [m]','cb_length [m]'};
     fprintf('\n========== OPTIMAL AIRCRAFT DESIGN ==========\n');
     for i = 1:n
         fprintf('  %-24s = %.4f\n', varNames{i}, xBest(i));
@@ -265,6 +268,8 @@ function optOut = profitOptimization(optIn)
     fprintf('  vertIn.sweep_c4_v_deg     = %.1f\n',    xBest(9));
     fprintf('  V_cruise                  = %.1f\n',    xBest(10));
     fprintf('  Vp (CAD target)           = %.4f m³  (%.2f L)\n', xBest(11), xBest(11)*1000);
+    fprintf('  cb_halfwidth [m]          = %.4f m  (total width = %.4f m)\n', xBest(12), 2*xBest(12));
+    fprintf('  cb_length [m]             = %.4f m\n', xBest(13));
     fprintf('==============================================\n\n');
 
     % ---- convergence plots ----
@@ -301,17 +306,19 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         lb = ctx.lb;   ub = ctx.ub;
         xp = lb + x_norm .* (ub - lb);
 
-        AR_x         = xp(1);
-        taper_x      = xp(2);
-        sweep_x      = xp(3);
-        twist_root_x = xp(4);
-        WS_x         = xp(5);
-        xLE_root_x   = xp(6);
-        AR_v_x       = xp(7);
-        taper_v_x    = xp(8);
-        sweep_v_x    = xp(9);
-        V_cruise_x   = xp(10);
-        Vp_x         = xp(11);
+        AR_x           = xp(1);
+        taper_x        = xp(2);
+        sweep_x        = xp(3);
+        twist_root_x   = xp(4);
+        WS_x           = xp(5);
+        xLE_root_x     = xp(6);
+        AR_v_x         = xp(7);
+        taper_v_x      = xp(8);
+        sweep_v_x      = xp(9);
+        V_cruise_x     = xp(10);
+        Vp_x           = xp(11);
+        cb_halfwidth_m = xp(12);
+        cb_length_m    = xp(13);
 
         g_c  = ctx.g;
         roh  = ctx.roh;
@@ -330,10 +337,13 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         wingIn_x.sweep_c4_deg = sweep_x;
         wingIn_x.xLE_root_m   = xLE_root_x;
         wingIn_x.S_ref_m2     = Wg_est / WS_x;
+        wingIn_x.y_root_m     = cb_halfwidth_m;
         wingOut_x             = wingGeometryDesign(wingIn_x);
 
         if wingOut_x.c_tip_m < ctx.c_tip_min_m; return; end
         if wingOut_x.b_m > ctx.b_max_m;         return; end
+        if cb_halfwidth_m >= wingOut_x.semiSpan_m; return; end
+        if Vp_x > cb_length_m * 2 * cb_halfwidth_m * ctx.Hf_m; return; end
 
         % early stall feasibility (conservative CLmax=0.80 placeholder)
         if sqrt(2*Wg_est / (roh * wingOut_x.S_ref_m2 * 0.80)) > ctx.Vs_max_mps * 1.2
@@ -374,7 +384,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         vertIn_x.sweep_c4_v_deg  = sweep_v_x;
         vertIn_x.x_c4_wing_ref_m = wingOut_x.x_c4_MAC_m;
         vertIn_x.xLE_root_v_m    = wingOut_x.xLE_tip_m;
-        vertIn_x.y_root_v_m      = ctx.wingIn_base.y_root_m + wingOut_x.semiSpan_m;
+        vertIn_x.y_root_v_m      = cb_halfwidth_m + wingOut_x.semiSpan_m;
         vertIn_x.z_root_v_m      = ctx.wingIn_base.z_root_m;
         vertOut_x                = verticalSurfaceDesign(vertIn_x);
 
@@ -391,9 +401,18 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
             m_fin_ea = m_vert_x;
         end
 
+        % ---- fuselage mass and geometry scaling ----
+        cb_area_x    = cb_length_m * 2 * cb_halfwidth_m;
+        cb_area_base = ctx.Lf_m * 2 * ctx.wingIn_base.y_root_m;
+        m_fuse_x     = ctx.m_fuse_ref_kg * cb_area_x / cb_area_base;
+        fuse_cg_frac = ctx.cadMass.fuselageOnly.cg_m(1) / ctx.Lf_m;
+        cadMass_x                      = ctx.cadMass;
+        cadMass_x.fuselageOnly.mass_kg = m_fuse_x;
+        cadMass_x.fuselageOnly.cg_m    = [fuse_cg_frac * cb_length_m, 0, 0];
+
         % ---- mass model ----
         comp_x = ctx.compFixed;
-        y_root = ctx.wingIn_base.y_root_m;
+        y_root = cb_halfwidth_m;
         z_root = ctx.wingIn_base.z_root_m;
         eta_s  = ctx.eta_servo;
 
@@ -421,7 +440,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
                 [x_fs, -vertOut_x.y_root_v_m, vertOut_x.z_root_v_m + 0.30*vertOut_x.b_v_m]);
         end
 
-        massIn_x.cadBodies   = ctx.cadMass;
+        massIn_x.cadBodies   = cadMass_x;
         massIn_x.pointMasses = comp_x;
         massOut_x            = aircraftMassProperties(massIn_x);
         Wg_actual            = massOut_x.weight_N;
@@ -446,11 +465,11 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         aeroIn_x.useDragBuildUp   = true;
         aeroIn_x.CD0_user         = 0.01224;
         aeroIn_x.Swet_wing_m2     = 2.04 * wingOut_x.S_ref_m2;
-        % Fuselage wetted area scales as Vp^(2/3) relative to current design Vp
-        aeroIn_x.Swet_fuse_m2     = ctx.Swet_fuse_m2 * (Vp_x / ctx.Vp_m3_base)^(2/3);
+        % Fuselage wetted area scales with box planform area (L × 2W)
+        aeroIn_x.Swet_fuse_m2     = ctx.Swet_fuse_m2 * cb_area_x / cb_area_base;
         aeroIn_x.Swet_fin_m2      = 2.04 * vertOut_x.S_v_total_m2;
-        aeroIn_x.Lf_m             = ctx.Lf_m;
-        aeroIn_x.Wf_m             = ctx.Wf_m;
+        aeroIn_x.Lf_m             = cb_length_m;
+        aeroIn_x.Wf_m             = 2 * cb_halfwidth_m;
         aeroIn_x.Hf_m             = ctx.Hf_m;
         aeroIn_x.tc               = ctx.tc;
         aeroIn_x.xc               = ctx.xc;
@@ -481,7 +500,8 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         dynIn_x.b_m              = wingOut_x.b_m;
         dynIn_x.xLE_root_m       = xLE_root_x;
         dynIn_x.xLE_tip_m        = wingOut_x.xLE_tip_m;
-        dynIn_x.y_root_m         = y_root;
+        dynIn_x.y_root_m         = cb_halfwidth_m;
+        dynIn_x.cb_chord_m       = cb_length_m;
         dynIn_x.semiSpan_m       = wingOut_x.semiSpan_m;
         dynIn_x.c_root_m         = wingOut_x.c_root_m;
         dynIn_x.c_tip_m          = wingOut_x.c_tip_m;
@@ -530,7 +550,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         if SM_x <= ctx.SM_min_pct
             Jobj = Jobj + 5.0 * (ctx.SM_min_pct - SM_x)^2;
         elseif SM_x >= ctx.SM_max_pct
-            Jobj = Jobj + 2.0 * (SM_x - ctx.SM_max_pct)^2;
+            Jobj = Jobj + 5.0 * (SM_x - ctx.SM_max_pct)^2;
         end
 
         % Short-period
@@ -567,9 +587,11 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         info.b_m      = wingOut_x.b_m;
         info.AR       = AR_x;
         info.S_ref    = wingOut_x.S_ref_m2;
-        info.Vp_L     = Vp_x * 1000;
-        info.V_cruise = V_cruise_x;
-        info.failed   = false;
+        info.Vp_L           = Vp_x * 1000;
+        info.V_cruise       = V_cruise_x;
+        info.cb_halfwidth_m = cb_halfwidth_m;
+        info.cb_length_m    = cb_length_m;
+        info.failed         = false;
 
     catch ME
         if ctx.debugObj
