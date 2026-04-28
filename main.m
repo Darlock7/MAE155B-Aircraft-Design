@@ -130,9 +130,9 @@ Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 4.508;         % [-] CMA-ES optimal (was 6.063)
-wingTapper  = 0.300;         % [-] CMA-ES optimal (was 0.302)
-wingSweep   = 29.4;          % [deg] CMA-ES optimal (was 29.9)
+AR          = 8.5;         % [-] CMA-ES optimal (was 6.063)
+wingTapper  =.80;         % [-] CMA-ES optimal (was 0.302)
+wingSweep   = 30;          % [deg] CMA-ES optimal (was 29.9)
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
@@ -527,8 +527,8 @@ fprintf('Tip LE x-location xLE_tip   = %.4f m\n\n', xLE_tip);
 fprintf('================ Airfoil Analysis (Surrogate) ================\n');
 
 % -------- User-selected root and tip airfoils --------
-airfoilRootName = 'mh61.dat';
-airfoilTipName  = 'mh61.dat';
+airfoilRootName = 'e222.dat';
+airfoilTipName  = 'e230.dat';
 
 % -------- Flow properties --------
 rho = roh;               % [kg/m^3]
@@ -676,11 +676,11 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.1153;
+twistIn.static_margin  = 0.7;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 3.00;  % CMA-ES optimal (was 2.35)
+twistIn.twist_root_deg = 0;  % CMA-ES optimal (was 2.35)
 twistIn.Nspan          = 200;
 
 % Run twist function
