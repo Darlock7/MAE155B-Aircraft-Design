@@ -64,10 +64,10 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = false;  % true = show all figures throughout the script
+showPlots       = true;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = true;   % true = open AVL 3D viewer before stability run
+viewGeometry    = false;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -134,6 +134,10 @@ AR          = 8;         % [-] profit optimizer
 wingTapper  = 0.661;         % [-] profit optimizer
 wingSweep   = 28.3;          % [deg] profit optimizer
 
+% (i) Fuselage / Centerbody Airfoil:
+fuselageAirfoil = 'mh95';    % ['mh95' | 'n0012' | other airfoil name in data/airfoils/]
+                              % Used for: AVL centerbody model, cargo bay geometry
+
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
 
@@ -181,6 +185,44 @@ Wg = (Wp + Wprop) / (1 - fe_eff);   % [N] gross weight
 We = fe_eff * Wg;                   % [N] empty weight
 Wg_grams = Wg / g * 1000;           % [g] gross weight
 
+%% ============== Cargo Bay Geometry (Fuselage Airfoil) ===========
+fprintf('================ Cargo Bay Geometry ======================\n');
+
+% Build airfoil filename from selection
+airfoilFileMap = struct();
+airfoilFileMap.mh95 = 'data/airfoils/mh95.dat';
+airfoilFileMap.n0012 = 'data/airfoils/n0012.dat';
+airfoilFileMap.mh64 = 'data/airfoils/mh64.dat';
+airfoilFileMap.mh62 = 'data/airfoils/mh62.dat';
+airfoilFileMap.mh61 = 'data/airfoils/mh61.dat';
+airfoilFileMap.mh60 = 'data/airfoils/mh60.dat';
+airfoilFileMap.eh3012 = 'data/airfoils/eh3012.dat';
+airfoilFileMap.eh2012 = 'data/airfoils/eh2012.dat';
+airfoilFileMap.e387 = 'data/airfoils/e387.dat';
+
+if isfield(airfoilFileMap, fuselageAirfoil)
+    cargoAirfoilFile = airfoilFileMap.(fuselageAirfoil);
+else
+    % Default fallback
+    cargoAirfoilFile = 'data/airfoils/mh95.dat';
+    warning('Unknown fuselage airfoil "%s", using mh95', fuselageAirfoil);
+end
+
+cargoIn = struct();
+cargoIn.L_fuse_m = Lf;              % [m] fuselage length from design vars
+cargoIn.airfoilFile = cargoAirfoilFile;
+cargoIn.showPlot = showPlots;       % show the cargo bay cross-section plot
+
+cargoOut = cargoBayGeometry(cargoIn);
+
+fprintf('Fuselage Length         (Lf)            = %.4f m\n', Lf);
+fprintf('Airfoil Type            = %s\n', upper(fuselageAirfoil));
+fprintf('Max Rectangle Width     (cargo width)   = %.4f m\n', cargoOut.width_m);
+fprintf('Max Rectangle Height    (cargo height)  = %.4f m\n', cargoOut.height_m);
+fprintf('Cargo Cross-Section Area                 = %.6f m^2\n', cargoOut.area_m2);
+fprintf('Cargo Bay Volume                          = %.6f m^3\n', cargoOut.volume_m3);
+fprintf('----------------------------------------------------------\n\n');
+
 %% ============== Energy Calculation ===========
 fprintf('================ Energy Calculation ======================\n');
 
@@ -224,7 +266,9 @@ fprintf('Baseline L/D               (LD)            = %.4f\n', LD);
 fprintf('Effective L/D              (LD_eff)        = %.4f\n', LD_eff);
 fprintf('Empty-weight penalty       (ke)            = %.4f\n', ke);
 fprintf('Derived Empty Weight       (We)            = %.4f N\n', We);
+fprintf('Derived Empty Weight       (We)            = %.4f kg\n', We/g);
 fprintf('Derived Gross Weight       (Wg)            = %.4f N\n', Wg);
+fprintf('Derived Gross Weight       (Wg)            = %.4f kg\n', Wg/g);
 fprintf('Derived Gross Weight [g]   (Wg_grams)      = %.4f g\n', Wg_grams);
 fprintf('-------------------------------------------------\n\n');
 
@@ -2082,6 +2126,13 @@ if runProfitOpt
     optIn.Lf_m = Lf;   optIn.Wf_m = Wf;   optIn.Hf_m = Hf;   % form factor dims stay fixed
     optIn.tc = tc;     optIn.xc = xc;
     optIn.Q_wing = Q_wing;   optIn.Q_fuse = Q_fuse;   optIn.Q_fin = Q_fin;
+
+    % ---- fuselage airfoil for cargo bay geometry ----
+    optIn.fuselageAirfoil = fuselageAirfoil;
+    optIn.cargoAirfoilFile = cargoAirfoilFile;
+    optIn.cargoBayVolume_m3 = cargoOut.volume_m3;   % [m³] max available from airfoil
+    optIn.cargoWidth_m = cargoOut.width_m;
+    optIn.cargoHeight_m = cargoOut.height_m;
 
     % ---- structural mass references for scaling ----
     % Wing mass scales as S_ref * sqrt(AR) relative to these baseline values.

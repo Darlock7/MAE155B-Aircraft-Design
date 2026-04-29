@@ -291,7 +291,11 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         if wingOut_x.c_tip_m < ctx.c_tip_min_m; return; end
         if wingOut_x.b_m > ctx.b_max_m;         return; end
         if cb_halfwidth_m >= wingOut_x.semiSpan_m; return; end
-        if Vp_x > cb_length_m * 2 * cb_halfwidth_m * ctx.Hf_m; return; end
+        
+        % ---- Cargo bay volume constraint: Vp must fit in airfoil cross-section ----
+        % Use actual airfoil geometry (not simple box model)
+        maxCargoVolume_m3 = ctx.cargoBayVolume_m3 * (cb_length_m / ctx.Lf_m);
+        if Vp_x > maxCargoVolume_m3; return; end
 
         % early stall feasibility (conservative CLmax=0.80 placeholder)
         if sqrt(2*Wg_est / (roh * wingOut_x.S_ref_m2 * 0.80)) > ctx.Vs_max_mps * 1.2
@@ -544,6 +548,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         info.V_cruise       = V_cruise_x;
         info.cb_halfwidth_m = cb_halfwidth_m;
         info.cb_length_m    = cb_length_m;
+        info.maxCargoVol_m3 = maxCargoVolume_m3;   % available from airfoil geometry
         info.failed         = false;
 
     catch ME
