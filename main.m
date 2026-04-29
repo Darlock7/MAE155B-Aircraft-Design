@@ -67,7 +67,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = true;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -77,7 +77,7 @@ runCSopt        = false;  % true = CMA-ES elevon optimizer
 runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
-runProfitOpt    = true;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
+runProfitOpt    = false;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
