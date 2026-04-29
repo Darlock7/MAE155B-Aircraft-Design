@@ -1,80 +1,80 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-29 09:13:05
+  Generated: 2026-04-29 15:28:57
 =================================================================
 
 --- WING PLANFORM ---
-  Full span          b        = 1.5715 m  (61.87 in)
-  Semispan           b/2      = 0.7858 m  (30.94 in)
-  Root chord         c_root   = 0.2365 m  (9.31 in)
-  Tip chord          c_tip    = 0.1563 m  (6.16 in)
-  MAC                MAC      = 0.1992 m  (7.84 in)
-  MAC span station   y_MAC    = 0.3662 m  (14.42 in) from root
-  Aspect ratio       AR       = 8.000
-  Taper ratio        lambda   = 0.661
-  Quarter-chord sweep         = 28.30 deg
-  Leading-edge sweep          = 30.15 deg
-  Wing root LE x (from nose)  = 0.0908 m  (3.57 in)
-  Wing root y (from CL)       = 0.0746 m  (2.94 in)
+  Full span          b        = 1.7258 m  (67.94 in)
+  Semispan           b/2      = 0.8629 m  (33.97 in)
+  Root chord         c_root   = 0.3702 m  (14.58 in)
+  Tip chord          c_tip    = 0.1129 m  (4.45 in)
+  MAC                MAC      = 0.2644 m  (10.41 in)
+  MAC span station   y_MAC    = 0.3549 m  (13.97 in) from root
+  Aspect ratio       AR       = 7.144
+  Taper ratio        lambda   = 0.305
+  Quarter-chord sweep         = 22.85 deg
+  Leading-edge sweep          = 27.41 deg
+  Wing root LE x (from nose)  = 0.1071 m  (4.22 in)
+  Wing root y (from CL)       = 0.0993 m  (3.91 in)
 
 --- ELEVON (each side) ---
   Chord fraction              = 0.450  (45.0% of local chord)
-  Inboard  eta / y            = 0.300  /  0.3103 m  (12.22 in)
-  Outboard eta / y            = 0.749  /  0.6631 m  (26.11 in)
-  Elevon span (each side)     = 0.3528 m  (13.89 in)
-  Chord at midspan            = 0.0875 m  (3.45 in)
+  Inboard  eta / y            = 0.300  /  0.3582 m  (14.10 in)
+  Outboard eta / y            = 0.749  /  0.7456 m  (29.35 in)
+  Elevon span (each side)     = 0.3874 m  (15.25 in)
+  Chord at midspan            = 0.1059 m  (4.17 in)
 
 --- VERTICAL FIN (each fin) ---
-  Span / height      b_v      = 0.1720 m  (6.77 in)
-  Root chord         c_root   = 0.2085 m  (8.21 in)
-  Tip chord          c_tip    = 0.0208 m  (0.82 in)
-  MAC                MAC_v    = 0.1402 m  (5.52 in)
-  Aspect ratio                = 1.500
-  Taper ratio                 = 0.100
-  Quarter-chord sweep         = 65.00 deg
-  Mount x (at wing-tip LE)    = 0.5472 m  (21.54 in) from nose
-  Mount y (wing tip)          = 0.8604 m  (33.87 in) from CL
+  Span / height      b_v      = 0.2981 m  (11.74 in)
+  Root chord         c_root   = 0.1320 m  (5.20 in)
+  Tip chord          c_tip    = 0.0776 m  (3.05 in)
+  MAC                MAC_v    = 0.1071 m  (4.22 in)
+  Aspect ratio                = 2.845
+  Taper ratio                 = 0.588
+  Quarter-chord sweep         = 50.00 deg
+  Mount x (at wing-tip LE)    = 0.5546 m  (21.84 in) from nose
+  Mount y (wing tip)          = 0.9622 m  (37.88 in) from CL
   Twin fins                   = 1
 
 --- RUDDER (each fin) ---
   Chord fraction              = 0.500  (50.0%)
-  Height span                 = 0.0908 m  (3.58 in)
-  Root chord                  = 0.0949 m  (3.74 in)
-  Tip chord                   = 0.0454 m  (1.79 in)
-  Area (single fin)           = 0.0064 m^2  (9.88 in^2)
+  Height span                 = 0.1574 m  (6.20 in)
+  Root chord                  = 0.0633 m  (2.49 in)
+  Tip chord                   = 0.0489 m  (1.93 in)
+  Area (single fin)           = 0.0088 m^2  (13.69 in^2)
 
 --- MASS AND CG ---
-  Total mass (loaded)         = 2.8995 kg  (6.392 lb)
-  Total mass (unloaded)       = 2.0995 kg  (4.629 lb)
-  CG loaded   x (from nose)   = 0.3306 m  (13.02 in)
-  CG loaded   y (from CL)     = 0.0037 m  (0.15 in)
-  CG loaded   % MAC           = 13.61 %
-  CG unloaded x (from nose)   = 0.3306 m  (13.01 in)
+  Total mass (loaded)         = 2.7495 kg  (6.062 lb)
+  Total mass (unloaded)       = 1.9495 kg  (4.298 lb)
+  CG loaded   x (from nose)   = 0.3406 m  (13.41 in)
+  CG loaded   y (from CL)     = 0.0044 m  (0.17 in)
+  CG loaded   % MAC           = 18.72 %
+  CG unloaded x (from nose)   = 0.3447 m  (13.57 in)
 
 --- PERFORMANCE ---
-  Design cruise speed         = 20.000 m/s  (44.7 mph)
-  Stall speed (loaded)        = 13.007 m/s  (29.1 mph)
-  Solved cruise speed         = 26.245 m/s  (58.7 mph)
-  Wing loading  W/S           = 92.14 N/m^2
-  Min turn radius (AVL)       = 24.22 m
-  Max bank angle              = 59.3 deg
-  Steady-state roll rate      = 294.6 deg/s
+  Design cruise speed         = 20.754 m/s  (46.4 mph)
+  Stall speed (loaded)        = 10.890 m/s  (24.4 mph)
+  Solved cruise speed         = 25.518 m/s  (57.1 mph)
+  Wing loading  W/S           = 64.70 N/m^2
+  Min turn radius (AVL)       = 22.77 m
+  Max bank angle              = 62.6 deg
+  Steady-state roll rate      = 298.2 deg/s
 
 --- STABILITY ---
-  Static margin (AVL)         = 11.37 %
-  Short period: wn = 9.491 rad/s,  zeta = 0.456
-  Phugoid:      wn = 0.419 rad/s,  zeta = -0.033
-  Dutch roll:   wn = 5.228 rad/s,  zeta = 0.092
-  Trim elevon deflection      = 4.96 deg
+  Static margin (AVL)         = 12.09 %
+  Short period: wn = NaN rad/s,  zeta = NaN
+  Phugoid:      wn = 13.558 rad/s,  zeta = 0.482
+  Dutch roll:   wn = 7.923 rad/s,  zeta = 0.127
+  Trim elevon deflection      = 7.96 deg
 
 --- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---
-  Elevon HM (one side) = 0.1122 N*m  OK  (63% of capacity)
-  Rudder HM (one fin)  = 0.0232 N*m  OK  (13% of capacity)
+  Elevon HM (one side) = 0.1942 N*m  *** UNDERSIZED (10% over limit) ***
+  Rudder HM (one fin)  = 0.0277 N*m  OK  (16% of capacity)
 
 --- STRUCTURE ---
   Spar diameter (selected)    = 10 mm
-  Required spar diameter      = 8.01 mm
-  Bending factor of safety    = 3.89
-  Max wing deflection         = 60.5 mm  (3.8% span)
+  Required spar diameter      = 8.27 mm
+  Bending factor of safety    = 3.54
+  Max wing deflection         = 80.1 mm  (4.6% span)
 
 =================================================================

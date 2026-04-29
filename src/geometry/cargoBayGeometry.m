@@ -7,7 +7,8 @@ function cargoOut = cargoBayGeometry(cargoIn)
 %   parallel to the chord line (horizontal) and perpendicular to it (vertical).
 %
 % Inputs:
-%   cargoIn.L_fuse_m       fuselage length [m]
+%   cargoIn.L_fuse_m       fuselage length [m]  (airfoil chord direction, fore-aft)
+%   cargoIn.W_fuse_m       fuselage width  [m]  (spanwise depth of cargo bay)
 %   cargoIn.airfoilFile    path to airfoil coordinate file (default: n0012.dat)
 %
 % Outputs:
@@ -47,6 +48,14 @@ function cargoOut = cargoBayGeometry(cargoIn)
     end
 
     L_fuse_m = cargoIn.L_fuse_m;
+    W_fuse_m = cargoIn.W_fuse_m;   % spanwise width — third dimension for volume
+
+    % x offset from fuselage-local frame to aircraft frame (motor at x=0)
+    if isfield(cargoIn, 'xLE_aircraft_m')
+        xLE_offset = cargoIn.xLE_aircraft_m;
+    else
+        xLE_offset = 0;
+    end
 
     % Load airfoil coordinates from file
     fid = fopen(cargoIn.airfoilFile, 'r');
@@ -55,11 +64,8 @@ function cargoOut = cargoBayGeometry(cargoIn)
             'Cannot open airfoil file: %s', cargoIn.airfoilFile);
     end
     
-    % Skip header lines (first 3 lines based on typical .dat format)
-    fgetl(fid);
-    fgetl(fid);
-    fgetl(fid);
-    
+    fgetl(fid);  % skip 1 header line (airfoil name)
+
     % Read coordinates
     coords = fscanf(fid, '%f %f', [2 inf]);
     fclose(fid);
@@ -122,7 +128,7 @@ function cargoOut = cargoBayGeometry(cargoIn)
     cargoOut.width_m = optimal_width * chord_m;
     cargoOut.height_m = optimal_height * 2 * chord_m;  % Full height (upper + lower)
     cargoOut.area_m2 = cargoOut.width_m * cargoOut.height_m;
-    cargoOut.volume_m3 = cargoOut.area_m2 * L_fuse_m;
+    cargoOut.volume_m3 = cargoOut.area_m2 * W_fuse_m;  % width_fore_aft × height × depth_spanwise
     
     % Rectangle coordinates (centered at airfoil center)
     x_center = (min(x_upper(y_upper >= optimal_height)) + max(x_upper(y_upper >= optimal_height))) / 2;
@@ -132,11 +138,11 @@ function cargoOut = cargoBayGeometry(cargoIn)
               x_center + optimal_width/2, x_center - optimal_width/2] * chord_m;
     y_rect = [-optimal_height, -optimal_height, optimal_height, optimal_height] * chord_m;
     
-    cargoOut.x_coords = x_rect;
+    cargoOut.x_coords = x_rect + xLE_offset;   % aircraft frame (x=0 at motor)
     cargoOut.y_coords = y_rect;
-    
-    % Airfoil coordinates scaled to actual size
-    cargoOut.airfoil_x = airfoil_x * chord_m;
+
+    % Airfoil coordinates scaled to actual size, in aircraft frame
+    cargoOut.airfoil_x = airfoil_x * chord_m + xLE_offset;
     cargoOut.airfoil_y = airfoil_y * chord_m;
     
     % Also return normalized values for reference

@@ -56,6 +56,9 @@
 
 clc; clear; close all;
 
+diary off;
+diary('outputs/main_output.txt');
+
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
 
@@ -64,10 +67,10 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = true;  % true = show all figures throughout the script
+showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = true;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -123,16 +126,16 @@ CLmax = 0.92863;               % [-] first-pass max lift coefficient
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 20.0;           % [m/s] CMA-ES optimal (was 24)
+V_cruise = 20.754;         % [m/s] CMA-ES optimal (was 24)
 V_stall_mps = 12;   % [m/s] chosen Stall speed
 Wp_g = 800;               % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 8;         % [-] profit optimizer
-wingTapper  = 0.661;         % [-] profit optimizer
-wingSweep   = 28.3;          % [deg] profit optimizer
+AR          = 7.144;         % [-] profit optimizer
+wingTapper  = 0.305;         % [-] profit optimizer
+wingSweep   = 22.848;        % [deg] profit optimizer
 
 % (i) Fuselage / Centerbody Airfoil:
 fuselageAirfoil = 'mh95';    % ['mh95' | 'n0012' | other airfoil name in data/airfoils/]
@@ -145,8 +148,8 @@ fuselageAirfoil = 'mh95';    % ['mh95' | 'n0012' | other airfoil name in data/ai
 CD0_user = CD0;            % [-]
 
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.9500;                   % [m] body length — capped at 0.95 m (optimizer wanted 0.9926)
-Wf = 0.1491;                   % [m] max body width — profit optimizer (2 × cb_halfwidth = 2 × 0.0746)
+Lf = 0.9793;                   % [m] body length — profit optimizer
+Wf = 0.1987;                   % [m] max body width — profit optimizer (2 × cb_halfwidth = 2 × 0.0993)
 
 % ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
 Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
@@ -208,10 +211,14 @@ else
     warning('Unknown fuselage airfoil "%s", using mh95', fuselageAirfoil);
 end
 
+cb_xLE_m = max(0.06 * Lf, 0.08154122);  % [m] fuselage LE in aircraft frame (x=0 at motor)
+
 cargoIn = struct();
-cargoIn.L_fuse_m = Lf;              % [m] fuselage length from design vars
+cargoIn.L_fuse_m = Lf;              % [m] fuselage length (airfoil chord, fore-aft)
+cargoIn.W_fuse_m = Wf;              % [m] fuselage width  (spanwise depth of cargo bay)
 cargoIn.airfoilFile = cargoAirfoilFile;
 cargoIn.showPlot = showPlots;       % show the cargo bay cross-section plot
+cargoIn.xLE_aircraft_m = cb_xLE_m; % [m] offset: fuselage-local → aircraft coordinates
 
 cargoOut = cargoBayGeometry(cargoIn);
 
@@ -435,6 +442,7 @@ T_avail_turn_N  = sizingOut.T_avail_turn_N;
 
 % Wing area from selected wing loading
 S_ref = 2.251 * g / WS_design;    % [m^2] — uses mass-model weight (fe-fraction overestimates)
+S_ref = 0.4169;                   % [m^2] profit optimizer (overrides sizing estimate)
 
 fprintf('Selected wing area S_ref      = %.4f m^2\n', S_ref);
 fprintf('Selected wing loading         = %.2f N/m^2\n', WS_design);
@@ -526,8 +534,8 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0908; % profit optimizer
-wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
+wingIn.xLE_root_m = 0.1071; % profit optimizer
+wingIn.y_root_m   = 0.0993; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
@@ -724,7 +732,7 @@ twistIn.static_margin  = 0.06;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 0; %2.40;  % profit optimizer
+twistIn.twist_root_deg = -0.04;  % profit optimizer
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -787,9 +795,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 1.500; % delta winglet
-vertIn.taper_v        = 0.100; % delta winglet
-vertIn.sweep_c4_v_deg = 65.0;  % delta winglet
+vertIn.AR_v           = 2.845; % profit optimizer
+vertIn.taper_v        = 0.588; % profit optimizer
+vertIn.sweep_c4_v_deg = 50.0;  % profit optimizer (at upper bound)
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
@@ -1061,7 +1069,7 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.15, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.150, [0.15, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
@@ -2199,3 +2207,5 @@ if runProfitOpt
     fprintf('  Optimization result saved to:\n   %s\n\n', optSaveFile);
 
 end
+
+diary off;

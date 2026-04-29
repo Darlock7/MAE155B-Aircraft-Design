@@ -293,8 +293,12 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         if cb_halfwidth_m >= wingOut_x.semiSpan_m; return; end
         
         % ---- Cargo bay volume constraint: Vp must fit in airfoil cross-section ----
-        % Use actual airfoil geometry (not simple box model)
-        maxCargoVolume_m3 = ctx.cargoBayVolume_m3 * (cb_length_m / ctx.Lf_m);
+        % Inscribed rectangle area scales as chord² (both sides scale with Lf),
+        % depth scales with fuselage width (2×cb_halfwidth). So full scaling:
+        %   maxVol = ref_vol × (cb_length/Lf_ref)² × (2×cb_halfwidth / Wf_ref)
+        maxCargoVolume_m3 = ctx.cargoBayVolume_m3 ...
+            * (cb_length_m   / ctx.Lf_m)^2 ...
+            * (2*cb_halfwidth_m / ctx.Wf_m);
         if Vp_x > maxCargoVolume_m3; return; end
 
         % early stall feasibility (conservative CLmax=0.80 placeholder)
