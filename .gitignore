@@ -28,6 +28,12 @@ results/
 output/
 figures/
 
+# VS Code local settings
+.vscode/
+
+# AVL temp working directories (per-call isolated workdirs)
+AVL/tp*/
+
 # AVL generated files (regenerated every run)
 AVL/fw_dyn.avl
 AVL/fw_dyn.mass
