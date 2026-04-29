@@ -67,7 +67,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = true;   % true = open AVL 3D viewer before stability run
+viewGeometry    = false;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -77,7 +77,7 @@ runCSopt        = false;  % true = CMA-ES elevon optimizer
 runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
-runProfitOpt    = false;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
+runProfitOpt    = true;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
@@ -130,7 +130,7 @@ Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 5.124;         % [-] profit optimizer
+AR          = 8;         % [-] profit optimizer
 wingTapper  = 0.661;         % [-] profit optimizer
 wingSweep   = 28.3;          % [deg] profit optimizer
 
@@ -994,11 +994,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.634, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.6, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3185, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3150, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which

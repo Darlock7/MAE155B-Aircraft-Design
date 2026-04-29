@@ -5,105 +5,11 @@ function optOut = profitOptimization(optIn)
 %   CMA-ES global optimizer for full aircraft design.
 %   Maximizes profit per unit time J subject to stability, stall,
 %   aerodynamic mode, and physical build constraints.
-%
-% Design variables (13):
-%   x(1)  = Wing AR                    [-]     bounds [4, 10]
-%   x(2)  = Wing taper ratio           [-]     bounds [0.30, 0.80]
-%   x(3)  = Wing quarter-chord sweep   [deg]   bounds [0, 30]
-%   x(4)  = Root geometric twist       [deg]   bounds [-5, 2]
-%   x(5)  = Wing loading WS_design     [N/m²]  bounds [20, 60]
-%   x(6)  = Wing LE root x-position    [m]     bounds [0.03, 0.15]
-%   x(7)  = Fin AR                     [-]     bounds [0.5, 2.5]
-%   x(8)  = Fin taper                  [-]     bounds [0.3, 0.8]
-%   x(9)  = Fin quarter-chord sweep    [deg]   bounds [20, 55]
-%   x(10) = Cruise speed               [m/s]   bounds [18, 28]
-%   x(11) = Cargo volume Vp            [m³]    bounds [0.001, 0.010]
-%   x(12) = Centerbody half-width      [m]     bounds [0.050, 0.300]  (cb_halfwidth)
-%   x(13) = Centerbody length          [m]     bounds [0.600, 1.000]  (cb_length)
-%
-% DERIVED PARAMETERS (auto-scaled with design):
-%   cb_xLE_m = 0.06 × cb_length  [m]  wing-fuselage join distance (motor at x=0)
-%
-% CMA-ES operates in normalized [0,1]^11 space for numerical conditioning.
-%
-% Physical constraints (hard — return 1e6 if violated):
-%   - Wingspan ≤ b_max_m
-%   - Tip chord ≥ c_tip_min_m
-%   - Stall speed ≤ Vs_max_mps
-%   - Cruise speed ≥ Vs_margin_fac × Vs  (stall margin)
-%   - Fin height ≤ b_v_max_frac × semispan
-%   - Gross weight ≤ Wg_max_N
-%
-% Stability constraints (soft quadratic penalty on objective):
-%   - SM ∈ [SM_min_pct, SM_max_pct]
-%   - Short-period oscillatory and stable
-%   - Phugoid non-divergent
-%   - Dutch roll non-divergent
-%   - Trim deflection |de_trim| ≤ de_trim_max_deg
-%
-% Required inputs (optIn struct):
-%   .dynIn_base           base dynIn with AVL paths, CS fractions, airfoil files
-%   .wingIn_base          base wingIn with y/z_root, eta_cs_*, symmetric flag
-%   .vertIn_base          base vertIn with isTwin, sizeMode, c_v, rudder, airfoilName
-%   .airfoilDB            preloaded surrogate database (from loadAirfoilSurrogateDB)
-%   .airfoilRootName      root airfoil filename string
-%   .airfoilTipName       tip airfoil filename string
-%   .cadMass              fuselage CAD mass struct
-%   .compFixed            point mass array, indices 1-6: motor/prop/ESC/batt/rx/payload
-%   .eta_servo            servo span fraction for wing servo placement
-%   .Wp_N                 payload weight [N]  (fixed)
-%   .Wprop_N              propulsion system weight [N]
-%   .Vp_ref_m3            reference volume for VPS penalty [m³]
-%   .fe_base              baseline empty weight fraction
-%   .ke                   VPS penalty slope [per VPS unit]
-%   .fe_max               hard cap on fe
-%   .eta_p                propulsive efficiency
-%   .R_cruise_m           mission range [m]
-%   .delta_h_m            climb altitude [m]
-%   .reserve_factor       energy reserve multiplier
-%   .Tf_s                 un-scaled flight time [s]  (×20 applied for scoring)
-%   .roh                  air density [kg/m³]
-%   .mu_Pas               dynamic viscosity [Pa·s]
-%   .g                    gravitational acceleration [m/s²]
-%   .Swet_fuse_m2         fixed fuselage wetted area [m²]
-%   .Lf_m / .Wf_m / .Hf_m fuselage dimensions [m]
-%   .tc / .xc             airfoil t/c and x/c of max thickness
-%   .Q_wing / .Q_fuse / .Q_fin  interference factors
-%   .m_wing_struct_ref_kg reference wing structure mass [kg]
-%   .m_vert_struct_ref_kg reference total fin structure mass [kg]
-%   .S_ref_base_m2        reference wing area for structural scaling [m²]
-%   .AR_base              reference AR for structural scaling
-%   .S_fin_base_m2        reference total fin area for structural scaling [m²]
-%
-% Optional / defaulted inputs:
-%   .SM_min_pct           min static margin [%]        (default 5)
-%   .SM_max_pct           max static margin [%]        (default 20)
-%   .Vs_max_mps           max stall speed [m/s]        (default 12)
-%   .b_max_m              max wingspan [m]             (default 1.8)
-%   .c_tip_min_m          min tip chord [m]            (default 0.05)
-%   .b_v_max_frac         max fin height / semispan    (default 0.50)
-%   .de_trim_max_deg      max trim deflection [deg]    (default 15)
-%   .Vs_margin_fac        V_cruise / Vs floor          (default 1.30)
-%   .Wg_max_N             max gross weight [N]         (default 60)
-%   .x0                   [11×1] initial guess, physical units (default: current design)
-%   .sigma0               initial step size in [0,1] space (default 0.15)
-%   .maxGen               max CMA-ES generations       (default 500)
-%   .lambda               population size; 0 = 2×Hansen ≈ 22 (default 0)
-%   .tolSigma             step-size convergence tolerance  (default 1e-5)
-%   .tolFun               J-range tolerance over last 10 gen (default 1e-4)
-%   .verbose              print every N generations    (default 10)
-%
-% Outputs (optOut struct):
-%   .xBest        [11×1] best design vector in physical units
-%   .JBest        best J [$/s]
-%   .JBest_hr     best J [$/hr]
-%   .best         struct: SM_pct, Vs_mps, LD, Wg_g, b_m, AR, S_ref, Vp_L, V_cruise
-%   .history      struct array per generation
 
     % ---- physical bounds ----
-    %           AR    tap   swp   twst  WS    xLE   ARv  tapv  swpv  Vc    Vp    cb_hw  cb_len
-    lb = [6.0; 0.30;  0.0; -5.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
-    ub = [10.0; 0.80; 30.0; 3.0; 90.0; 0.300; 3.50; 0.70; 50.0; 28.0; 0.015; 0.300; 1.000];
+    %         AR    tap   swp   twst  WS    xLE   ARv  tapv  swpv  Vc    Vp    cb_hw  cb_len
+    lb =     [7.0; 0.30;  0.0; 0.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
+    ub =     [10.0; 0.80; 35.0; -3.0; 90.0; 0.300; 3.50; 0.70; 50.0; 28.0; 0.015; 0.300; 1.000];
     x0_def = [8.5; 0.702; 22.7; 0.0; 40.0; 0.100; 2.41; 0.400; 40.7; 24.0; 0.0060; 0.145; 0.620];
 
     if ~isfield(optIn,'x0'),              optIn.x0              = x0_def;  end
@@ -130,12 +36,13 @@ function optOut = profitOptimization(optIn)
     x0_norm = (optIn.x0(:) - lb) ./ (ub - lb);
     x0_norm = max(0, min(1, x0_norm));
 
-    % ---- CMA-ES hyperparameters (Hansen 2016) ----
+    % ---- CMA-ES hyperparameters ----
     if optIn.lambda > 0
         lam = optIn.lambda;
     else
-        lam = 2 * (4 + floor(3*log(n)));   % 2× Hansen ≈ 22
+        lam = 2 * (4 + floor(3*log(n)));
     end
+
     mu    = floor(lam/2);
     w_raw = log(mu + 0.5) - log(1:mu)';
     w     = w_raw / sum(w_raw);
@@ -160,11 +67,14 @@ function optOut = profitOptimization(optIn)
 
     JBest      = Inf;
     xBest_norm = m;
-    infoBest   = struct('J_hr',NaN,'SM_pct',NaN,'Vs_mps',NaN,'LD',NaN, ...
-                        'Wg_g',NaN,'b_m',NaN,'AR',NaN,'S_ref',NaN, ...
-                        'Vp_L',NaN,'V_cruise',NaN, ...
-                        'cb_halfwidth_m',NaN,'cb_length_m',NaN,'failed',true);
-    history    = struct('gen',{},'JBest',{},'sigma',{},'J_hr',{},'SM_pct',{},'Vs_mps',{});
+
+    infoBest = struct('J_hr',NaN,'SM_pct',NaN,'Vs_mps',NaN,'LD',NaN, ...
+                      'Wg_g',NaN,'b_m',NaN,'AR',NaN,'S_ref',NaN, ...
+                      'Vp_L',NaN,'V_cruise',NaN, ...
+                      'cb_halfwidth_m',NaN,'cb_length_m',NaN,'failed',true);
+
+    history = struct('gen',{},'JBest',{},'sigma',{}, ...
+                     'J_hr',{},'SM_pct',{},'Vs_mps',{});
 
     ctx    = optIn;
     ctx.lb = lb;
@@ -172,12 +82,19 @@ function optOut = profitOptimization(optIn)
 
     fprintf('\n===== FULL AIRCRAFT PROFIT OPTIMIZATION (CMA-ES) =====\n');
     fprintf('  n=%d variables,  lambda=%d,  mu=%d,  maxGen=%d\n', n, lam, mu, optIn.maxGen);
-    fprintf('  AR[%.0f,%.0f]  taper[%.1f,%.1f]  sweep[%.0f,%.0f]deg  ', lb(1),ub(1),lb(2),ub(2),lb(3),ub(3));
-    fprintf('V_cruise[%.0f,%.0f]m/s  Vp[%.0f,%.0f]L\n', lb(10),ub(10),lb(11)*1000,ub(11)*1000);
+    fprintf('  AR[%.0f,%.0f]  taper[%.1f,%.1f]  sweep[%.0f,%.0f]deg  ', ...
+        lb(1),ub(1),lb(2),ub(2),lb(3),ub(3));
+    fprintf('V_cruise[%.0f,%.0f]m/s  Vp[%.0f,%.0f]L\n', ...
+        lb(10),ub(10),lb(11)*1000,ub(11)*1000);
     fprintf('  Rough estimate: %.0f–%.0f min total (AVL ~2 s/call, parfor)\n\n', ...
         lam*2*optIn.maxGen/60*0.4, lam*2*optIn.maxGen/60);
-    fprintf('%-6s %-10s %-7s %-7s %-7s %-6s %-5s %-5s %-8s\n', ...
-        'Gen','J[$/hr]','SM[%]','Vs[m/s]','L/D','b[m]','AR','Vp[L]','sigma');
+
+    fprintf('%-6s %-9s %-10s %-10s %-8s %-8s %-8s %-7s %-7s %-9s %-10s\n', ...
+        'Gen','Done[%]','Elapsed','BestJ/hr','SM[%]','Vs[m/s]', ...
+        'L/D','b[m]','AR','Vp[L]','sigma');
+    fprintf('%s\n', repmat('-',1,105));
+
+    tStartOpt = tic;
 
     for gen = 1:optIn.maxGen
 
@@ -224,21 +141,33 @@ function optOut = profitOptimization(optIn)
         rankmu = cmu * (Ysorted(:,1:mu) * diag(w) * Ysorted(:,1:mu)');
         C      = (1 - c1 - cmu) * C + rank1 + rankmu;
         C      = (C + C') / 2;
-        sigma  = sigma * exp((cs/ds) * (norm(ps)/chiN - 1));
 
-        if optIn.verbose > 0 && mod(gen, optIn.verbose) == 0
-            fprintf('%-6d %-10.4f %-7.2f %-7.2f %-7.3f %-6.3f %-5.2f %-5.2f %-8.2e\n', ...
-                gen, infoBest.J_hr, infoBest.SM_pct, infoBest.Vs_mps, infoBest.LD, ...
-                infoBest.b_m, infoBest.AR, infoBest.Vp_L, sigma);
-        end
+        sigma = sigma * exp((cs/ds) * (norm(ps)/chiN - 1));
+
         history(end+1) = struct('gen',gen,'JBest',JBest,'sigma',sigma, ...
             'J_hr',infoBest.J_hr,'SM_pct',infoBest.SM_pct,'Vs_mps',infoBest.Vs_mps);
 
-        if sigma < optIn.tolSigma
-            fprintf('Converged: sigma = %.2e < tolSigma\n', sigma); break;
+        %% -------- Progress Print --------
+        pctDone     = 100 * gen / optIn.maxGen;
+        elapsed_min = toc(tStartOpt) / 60;
+
+        if optIn.verbose > 0 && ...
+           (mod(gen,optIn.verbose)==0 || gen==1 || gen==optIn.maxGen)
+
+            fprintf('%-6d %-8.1f%% %-10.2f %-10.3f %-8.2f %-8.2f %-8.2f %-7.3f %-7.2f %-9.2f %-10.3g\n', ...
+                gen, pctDone, elapsed_min, infoBest.J_hr, ...
+                infoBest.SM_pct, infoBest.Vs_mps, infoBest.LD, ...
+                infoBest.b_m, infoBest.AR, infoBest.Vp_L, sigma);
         end
+
+        if sigma < optIn.tolSigma
+            fprintf('Converged: sigma = %.2e < tolSigma\n', sigma);
+            break;
+        end
+
         if gen > 50 && range([history(end-9:end).JBest]) < optIn.tolFun
-            fprintf('Converged: objective range < tolFun over last 10 gen\n'); break;
+            fprintf('Converged: objective range < tolFun over last 10 gen\n');
+            break;
         end
     end
 
@@ -246,12 +175,14 @@ function optOut = profitOptimization(optIn)
     xBest = lb + xBest_norm .* (ub - lb);
 
     varNames = {'AR','Taper','Sweep c/4 [deg]','Root twist [deg]','WS [N/m²]', ...
-                'xLE_root [m]','AR_v','Taper_v','Sweep_v [deg]','V_cruise [m/s]','Vp [m³]', ...
-                'cb_halfwidth [m]','cb_length [m]'};
+                'xLE_root [m]','AR_v','Taper_v','Sweep_v [deg]', ...
+                'V_cruise [m/s]','Vp [m³]','cb_halfwidth [m]','cb_length [m]'};
+
     fprintf('\n========== OPTIMAL AIRCRAFT DESIGN ==========\n');
     for i = 1:n
         fprintf('  %-24s = %.4f\n', varNames{i}, xBest(i));
     end
+
     fprintf('\n  Profit J               = %.4f $/hr\n', infoBest.J_hr);
     fprintf('  Static margin          = %.2f %%\n',    infoBest.SM_pct);
     fprintf('  Stall speed            = %.2f m/s\n',   infoBest.Vs_mps);
@@ -261,6 +192,7 @@ function optOut = profitOptimization(optIn)
     fprintf('  Wing area              = %.4f m²\n',    infoBest.S_ref);
     fprintf('  Cargo volume           = %.2f L\n',     infoBest.Vp_L);
     fprintf('  Cruise speed           = %.1f m/s\n',   infoBest.V_cruise);
+
     fprintf('\n--- Update main.m with these values ---\n');
     fprintf('  AR                        = %.3f\n',    xBest(1));
     fprintf('  wingTapper                = %.3f\n',    xBest(2));
@@ -279,19 +211,30 @@ function optOut = profitOptimization(optIn)
 
     % ---- convergence plots ----
     gens = [history.gen];
+
     figure('Name','Profit Optimization Convergence');
+
     subplot(3,1,1);
     plot(gens, [history.J_hr], 'b-', 'LineWidth', 2);
-    ylabel('Best J [$/hr]'); xlabel('Generation');
-    title('Full Aircraft CMA-ES Convergence'); grid on;
+    ylabel('Best J [$/hr]');
+    xlabel('Generation');
+    title('Full Aircraft CMA-ES Convergence');
+    grid on;
+
     subplot(3,1,2);
-    plot(gens, [history.SM_pct], 'g-', 'LineWidth', 2); hold on;
+    plot(gens, [history.SM_pct], 'g-', 'LineWidth', 2);
+    hold on;
     yline(optIn.SM_min_pct, 'r--', 'SM_{min}');
     yline(optIn.SM_max_pct, 'r--', 'SM_{max}');
-    ylabel('SM [%]'); xlabel('Generation'); grid on;
+    ylabel('SM [%]');
+    xlabel('Generation');
+    grid on;
+
     subplot(3,1,3);
     plot(gens, [history.sigma], 'k-', 'LineWidth', 2);
-    ylabel('\sigma (step size)'); xlabel('Generation'); grid on;
+    ylabel('\sigma (step size)');
+    xlabel('Generation');
+    grid on;
 
     optOut.xBest    = xBest;
     optOut.JBest    = -JBest;
