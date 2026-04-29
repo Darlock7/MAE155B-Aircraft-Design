@@ -10,7 +10,7 @@ function [J, info] = stabilityObjective(x, ctx)
 %   x    [7x1] parameter vector:
 %          x(1) wing quarter-chord sweep  [deg]
 %          x(2) wing taper ratio          [-]
-%          x(3) root geometric twist      [deg]
+%          x(3) tip geometric twist       [deg]  (root fixed at 0; negative = washout)
 %          x(4) fin aspect ratio          [-]
 %          x(5) fin taper ratio           [-]
 %          x(6) fin quarter-chord sweep   [deg]
@@ -28,14 +28,13 @@ function [J, info] = stabilityObjective(x, ctx)
     try
         wingSweep_x  = x(1);
         taper_x      = x(2);
-        twistRoot_x  = x(3);
+        twistTip_x   = x(3);
         AR_v_x       = x(4);
         taperV_x     = x(5);
         sweepV_x     = x(6);
         xLE_root_x   = x(7);
 
         wingIn  = ctx.wingIn;
-        twistIn = ctx.twistIn;
         vertIn  = ctx.vertIn;
         dynIn   = ctx.dynIn;
 
@@ -46,15 +45,7 @@ function [J, info] = stabilityObjective(x, ctx)
         wingIn_x.xLE_root_m   = xLE_root_x;
         wingOut_x             = wingGeometryDesign(wingIn_x);
 
-        % ---- twist ----
-        twistIn_x                = twistIn;
-        twistIn_x.b_m            = wingOut_x.b_m;
-        twistIn_x.AR             = wingOut_x.AR;
-        twistIn_x.c_root_m       = wingOut_x.c_root_m;
-        twistIn_x.c_tip_m        = wingOut_x.c_tip_m;
-        twistIn_x.sweep_c4_deg   = wingOut_x.sweep_c4_deg;
-        twistIn_x.twist_root_deg = twistRoot_x;
-        twistOut_x               = twistFunctionPanknin(twistIn_x);
+        % ---- twist (direct tip input; root fixed at 0) ----
 
         % ---- fins ----
         vertIn_x                = vertIn;
@@ -129,8 +120,8 @@ function [J, info] = stabilityObjective(x, ctx)
         dynIn_x.semiSpan_m  = wingOut_x.semiSpan_m;
         dynIn_x.c_root_m    = wingOut_x.c_root_m;
         dynIn_x.c_tip_m     = wingOut_x.c_tip_m;
-        dynIn_x.twist_root_deg = twistOut_x.twist_root_deg;
-        dynIn_x.twist_tip_deg  = twistOut_x.twist_tip_deg;
+        dynIn_x.twist_root_deg = 0;
+        dynIn_x.twist_tip_deg  = twistTip_x;
         dynIn_x.xLE_root_v_m   = vertOut_x.xLE_root_v_m;
         dynIn_x.y_root_v_m     = vertOut_x.y_root_v_m;
         dynIn_x.z_root_v_m     = vertOut_x.z_root_v_m;

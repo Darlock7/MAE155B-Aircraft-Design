@@ -67,7 +67,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = true;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -75,9 +75,9 @@ modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95
 useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
 runCSopt        = false;  % true = CMA-ES elevon optimizer          
 runSweep        = false;  % true = dynamic stability parameter sweep 
-runOptimization = true;  % true = CMA-ES dynamic stability optimizer (~30 min)
+runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
-runProfitOpt    = false;  % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
+runProfitOpt    = false;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
@@ -130,9 +130,9 @@ Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 8.5;         % [-] CMA-ES optimal (was 6.063)
-wingTapper  =.80;         % [-] CMA-ES optimal (was 0.302)
-wingSweep   = 30;          % [deg] CMA-ES optimal (was 29.9)
+AR          = 5.124;         % [-] profit optimizer
+wingTapper  = 0.661;         % [-] profit optimizer
+wingSweep   = 28.3;          % [deg] profit optimizer
 
 %% ============== Drag Build-Up User Inputs ==============
 % These are user-entered first-pass values and should be updated from CAD.
@@ -141,8 +141,8 @@ wingSweep   = 30;          % [deg] CMA-ES optimal (was 29.9)
 CD0_user = CD0;            % [-]
 
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.88427932;                   % [m] body length — CMA-ES optimal (was 0.6406)
-Wf = 0.28000000;                   % [m] max body width — CMA-ES optimal (2 × 0.1171)
+Lf = 0.9500;                   % [m] body length — capped at 0.95 m (optimizer wanted 0.9926)
+Wf = 0.1491;                   % [m] max body width — profit optimizer (2 × cb_halfwidth = 2 × 0.0746)
 
 % ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
 Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
@@ -321,7 +321,7 @@ sIn = struct();
 % Basic constants / current weight estimate
 sIn.rho_sl = roh;        % [kg/m^3]
 sIn.g      = g;          % [m/s^2]
-sIn.W0_N   = Wg;         % [N]
+sIn.W0_N   = 2.251 * g;  % [N] mass-model result (fe-fraction overestimates at Vp=15L)
 
 % Aero assumptions
 sIn.AR    = AR;          % [-]
@@ -390,7 +390,7 @@ T_avail_climb_N = sizingOut.T_avail_climb_N;
 T_avail_turn_N  = sizingOut.T_avail_turn_N;
 
 % Wing area from selected wing loading
-S_ref = Wg / WS_design;    % [m^2]
+S_ref = 2.251 * g / WS_design;    % [m^2] — uses mass-model weight (fe-fraction overestimates)
 
 fprintf('Selected wing area S_ref      = %.4f m^2\n', S_ref);
 fprintf('Selected wing loading         = %.2f N/m^2\n', WS_design);
@@ -482,8 +482,8 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.1138; % CMA-ES optimal (was 0.1223)
-wingIn.y_root_m   = 0.1171; % CMA-ES optimal (was 0.1155)
+wingIn.xLE_root_m = 0.0908; % profit optimizer
+wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
@@ -676,11 +676,11 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.7;
+twistIn.static_margin  = 0.07;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 0;  % CMA-ES optimal (was 2.35)
+twistIn.twist_root_deg = 2.40;  % profit optimizer
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -733,7 +733,7 @@ vertIn.sizeMode = 'tailVolumeCoeff';
 %     c_v = (L_v * S_v_total) / (b_w * S_w)
 %
 % Therefore, leave c_v as the desired TOTAL-system coefficient.
-vertIn.c_v = 0.04;
+vertIn.c_v = 0.020;  % reduced for delta winglet — c_root ≈ c_tip_wing at AR=1.5, taper=0.10
 
 % Wing reference quarter-chord x-location
 vertIn.x_c4_wing_ref_m = x_c4_MAC;
@@ -743,9 +743,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 2.015; % CMA-ES optimal (was 3.187)
-vertIn.taper_v        = 0.700; % CMA-ES optimal (was 0.458)
-vertIn.sweep_c4_v_deg = 50.0;  % CMA-ES optimal (was 46.9)
+vertIn.AR_v           = 1.500; % delta winglet
+vertIn.taper_v        = 0.100; % delta winglet
+vertIn.sweep_c4_v_deg = 65.0;  % delta winglet
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
@@ -994,11 +994,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.161, [.47, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.161, [0.553, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3387, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.2894, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
@@ -1558,7 +1558,7 @@ fprintf('\n================ SM CORRECTION ADVISOR =================\n');
 SM_target    = 7.5;   % [%] midpoint of 5-10% target band
 xNP_curr     = massOut.cg_m(1) + dynOut.SM_pct/100 * wingOut.MAC_m;
 m_batt_kg    = 0.161;
-x_batt_curr  = 0.47;
+x_batt_curr  = 0.553;
 m_no_batt_kg = massOut.mass_kg - m_batt_kg;
 x_cg_no_batt = (massOut.mass_kg*massOut.cg_m(1) - m_batt_kg*x_batt_curr) / m_no_batt_kg;
 x_cg_target  = xNP_curr - SM_target/100 * wingOut.MAC_m;
@@ -1642,12 +1642,12 @@ sweepIn.maxIter = 50;
 % Wing: [lo, hi]
 sweepIn.wingSweep_range = [0,   40 ];   % [deg]
 sweepIn.wingTaper_range = [0.60, 1.00];  % [-]
-sweepIn.twistRoot_range = [0.0, 0.0 ];  % [deg]
+sweepIn.twistTip_range  = [-5.0, 0.0];  % [deg] tip washout (root fixed at 0)
 
 % Vertical fins: [lo, hi]
-sweepIn.AR_v_range    = [1.5, 2.0 ];  % [-]
-sweepIn.taperV_range  = [0.10, 1.00]; % [-]a
-sweepIn.sweepV_range  = [20,  45  ];  % [deg]
+sweepIn.AR_v_range    = [1.0,  2.0 ];  % [-]  delta winglet space
+sweepIn.taperV_range  = [0.05, 0.25];  % [-]  delta winglet space
+sweepIn.sweepV_range  = [55,   75  ];  % [deg] delta winglet space
 
 % Wing attachment fore/aft position: slides NP aft when wing moves aft
 sweepIn.xLE_root_range = [0.05, 0.30];  % [m]  baseline is 0.0822 m
@@ -1667,14 +1667,14 @@ end
 if runOptimization
     optIn.ctx    = sweepIn;   % reuse context built above (has cadMass, compFixed, etc.)
 
-    % initial point: feasible start with AR_v=2 (fins within 50% semispan)
-    % DR Level 1 is not achievable within the height constraint — optimizer
-    % will maximize SM with SP Level 1 and best achievable DR/PH
-    optIn.x0     = [21.0; 0.849; -0.07; 2.0; 0.492; 40.0; 0.1498];
+    % initial point: delta winglet baseline
+    % x(3) = tip twist (root fixed at 0; negative = washout toward tip)
+    % x(4) = AR_v, x(5) = taper_v, x(6) = sweep_c4_v_deg
+    optIn.x0     = [21.0; 0.849; -2.0; 1.5; 0.10; 65.0; 0.1498];
 
-    % search bounds — AR_v capped at 3.0 (50% semispan ≈ AR_v 2.4 for this fin area)
-    optIn.lb     = [20;  0.60; -5.0; 1.0; 0.40; 20; 0.05];
-    optIn.ub     = [40;  1.00;  0.0; 3.0; 0.80; 45; 0.20];
+    % search bounds — delta winglet space
+    optIn.lb     = [20;  0.60; -5.0; 1.0; 0.05; 55; 0.05];
+    optIn.ub     = [40;  1.00;  0.0; 2.0; 0.25; 75; 0.20];
 
     optIn.sigma0 = 1.0;
 
@@ -1801,7 +1801,7 @@ fprintf('  Actual gross weight          = %.1f g\n', Wg_physics/g*1000);
 
 % ---- CG / stability setup for sweep ----
 % xNP is fixed (aero surfaces don't change); derive it from current AVL SM.
-x_payload_m      = 0.3387;                              % [m] payload CG x-location (from point mass)
+x_payload_m      = 0.2894;                              % [m] payload CG x-location (matches loaded CG)
 m_total_kg       = massOut.mass_kg;                     % [kg]
 m_no_payload_kg  = m_total_kg - Wp/g;                   % [kg] aircraft without payload
 x_cg_total       = massOut.cg_m(1);                     % [m] current loaded CG

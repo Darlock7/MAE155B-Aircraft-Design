@@ -15,7 +15,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
 %   .maxIter           number of samples [-]
 %   .wingSweep_range   [lo hi] wing quarter-chord sweep [deg]
 %   .wingTaper_range   [lo hi] wing taper ratio [-]
-%   .twistRoot_range   [lo hi] root geometric twist [deg]
+%   .twistTip_range    [lo hi] tip geometric twist [deg] (root fixed at 0; negative = washout)
 %   .AR_v_range        [lo hi] fin aspect ratio [-]
 %   .taperV_range      [lo hi] fin taper ratio [-]
 %   .sweepV_range      [lo hi] fin quarter-chord sweep [deg]
@@ -43,10 +43,10 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
     maxIter = sweepIn.maxIter;
 
     % sweep bounds
-    lo = [sweepIn.wingSweep_range(1), sweepIn.wingTaper_range(1), sweepIn.twistRoot_range(1), ...
+    lo = [sweepIn.wingSweep_range(1), sweepIn.wingTaper_range(1), sweepIn.twistTip_range(1), ...
           sweepIn.AR_v_range(1),      sweepIn.taperV_range(1),    sweepIn.sweepV_range(1), ...
           sweepIn.xLE_root_range(1)];
-    hi = [sweepIn.wingSweep_range(2), sweepIn.wingTaper_range(2), sweepIn.twistRoot_range(2), ...
+    hi = [sweepIn.wingSweep_range(2), sweepIn.wingTaper_range(2), sweepIn.twistTip_range(2), ...
           sweepIn.AR_v_range(2),      sweepIn.taperV_range(2),    sweepIn.sweepV_range(2), ...
           sweepIn.xLE_root_range(2)];
 
@@ -54,7 +54,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
     params = lo + rand(maxIter, 7) .* (hi - lo);
 
     emptyRes = struct( ...
-        'wingSweep', NaN, 'wingTaper', NaN, 'twistRoot', NaN, ...
+        'wingSweep', NaN, 'wingTaper', NaN, 'twistTip', NaN, ...
         'AR_v',      NaN, 'taperV',    NaN, 'sweepV',    NaN, 'xLE_root', NaN, ...
         'SM_pct',    NaN, 'Xcg_m',     NaN, ...
         'sp_wn',     NaN, 'sp_zeta',   NaN, ...
@@ -70,7 +70,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
         try
             wingSweep_k  = params(k,1);
             taper_k      = params(k,2);
-            twistRoot_k  = params(k,3);
+            twistTip_k   = params(k,3);
             AR_v_k       = params(k,4);
             taperV_k     = params(k,5);
             sweepV_k     = params(k,6);
@@ -83,15 +83,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
             wingIn_k.xLE_root_m   = xLE_root_k;
             wingOut_k             = wingGeometryDesign(wingIn_k);
 
-            % --- twist ---
-            twistIn_k                = twistIn;
-            twistIn_k.b_m            = wingOut_k.b_m;
-            twistIn_k.AR             = wingOut_k.AR;
-            twistIn_k.c_root_m       = wingOut_k.c_root_m;
-            twistIn_k.c_tip_m        = wingOut_k.c_tip_m;
-            twistIn_k.sweep_c4_deg   = wingOut_k.sweep_c4_deg;
-            twistIn_k.twist_root_deg = twistRoot_k;
-            twistOut_k               = twistFunctionPanknin(twistIn_k);
+            % --- twist (direct tip input; root fixed at 0) ---
 
             % --- fins ---
             vertIn_k                = vertIn;
@@ -164,8 +156,8 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
             dynIn_k.semiSpan_m  = wingOut_k.semiSpan_m;
             dynIn_k.c_root_m    = wingOut_k.c_root_m;
             dynIn_k.c_tip_m     = wingOut_k.c_tip_m;
-            dynIn_k.twist_root_deg = twistOut_k.twist_root_deg;
-            dynIn_k.twist_tip_deg  = twistOut_k.twist_tip_deg;
+            dynIn_k.twist_root_deg = 0;
+            dynIn_k.twist_tip_deg  = twistTip_k;
             dynIn_k.xLE_root_v_m   = vertOut_k.xLE_root_v_m;
             dynIn_k.y_root_v_m     = vertOut_k.y_root_v_m;
             dynIn_k.z_root_v_m     = vertOut_k.z_root_v_m;
@@ -187,7 +179,7 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
 
             results(k).wingSweep = wingSweep_k;
             results(k).wingTaper = taper_k;
-            results(k).twistRoot = twistRoot_k;
+            results(k).twistTip  = twistTip_k;
             results(k).AR_v      = AR_v_k;
             results(k).taperV    = taperV_k;
             results(k).sweepV    = sweepV_k;
@@ -223,8 +215,8 @@ function sweepOut = dynamicStabilitySweep(sweepIn)
 
     fprintf('\nBest SM = %.2f %%MAC  (iter %d)  Xcg = %.4f m\n', ...
         bestSM, iBest, results(iBest).Xcg_m);
-    fprintf('  wingSweep=%.1f deg  taper=%.3f  twistRoot=%.2f deg\n', ...
-        results(iBest).wingSweep, results(iBest).wingTaper, results(iBest).twistRoot);
+    fprintf('  wingSweep=%.1f deg  taper=%.3f  twistTip=%.2f deg\n', ...
+        results(iBest).wingSweep, results(iBest).wingTaper, results(iBest).twistTip);
     fprintf('  AR_v=%.2f  taper_v=%.3f  sweep_v=%.1f deg\n', ...
         results(iBest).AR_v, results(iBest).taperV, results(iBest).sweepV);
     fprintf('  xLE_root=%.4f m\n', results(iBest).xLE_root);

@@ -172,7 +172,7 @@ function optOut = optimizeDynamicStability(optIn)
     fprintf('Xcg     = %.4f m\n',      infoBest.Xcg_m);
     fprintf('SP zeta = %.4f\n',        infoBest.sp_zeta);
     fprintf('PH zeta = %.4f\n',        infoBest.ph_zeta);
-    fprintf('x* = [sweep=%.1f  taper=%.3f  twistRoot=%.2f  AR_v=%.2f  taperV=%.3f  sweepV=%.1f  xLE_root=%.4f]\n', ...
+    fprintf('x* = [sweep=%.1f  taper=%.3f  twistTip=%.2f  AR_v=%.2f  taperV=%.3f  sweepV=%.1f  xLE_root=%.4f]\n', ...
         xBest(1), xBest(2), xBest(3), xBest(4), xBest(5), xBest(6), xBest(7));
     fprintf('===================================================\n\n');
 
