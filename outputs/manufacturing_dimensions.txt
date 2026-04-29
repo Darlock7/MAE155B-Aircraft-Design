@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-28 17:44:22
+  Generated: 2026-04-28 20:27:38
 =================================================================
 
 --- WING PLANFORM ---
@@ -44,28 +44,28 @@
   Area (single fin)           = 0.0065 m^2  (10.06 in^2)
 
 --- MASS AND CG ---
-  Total mass (loaded)         = 2.2510 kg  (4.963 lb)
-  Total mass (unloaded)       = 1.4510 kg  (3.199 lb)
-  CG loaded   x (from nose)   = 0.3010 m  (11.85 in)
-  CG loaded   y (from CL)     = 0.0028 m  (0.11 in)
-  CG loaded   % MAC           = 13.29 %
-  CG unloaded x (from nose)   = 0.3075 m  (12.10 in)
+  Total mass (loaded)         = 2.2485 kg  (4.957 lb)
+  Total mass (unloaded)       = 1.4485 kg  (3.193 lb)
+  CG loaded   x (from nose)   = 0.3185 m  (12.54 in)
+  CG loaded   y (from CL)     = 0.0039 m  (0.15 in)
+  CG loaded   % MAC           = 20.30 %
+  CG unloaded x (from nose)   = 0.3185 m  (12.54 in)
 
 --- PERFORMANCE ---
   Design cruise speed         = 20.000 m/s  (44.7 mph)
-  Stall speed (loaded)        = 11.364 m/s  (25.4 mph)
-  Solved cruise speed         = 26.394 m/s  (59.0 mph)
-  Wing loading  W/S           = 71.53 N/m^2
-  Min turn radius (AVL)       = 34.25 m
-  Max bank angle              = 50.0 deg
-  Steady-state roll rate      = 370.2 deg/s
+  Stall speed (loaded)        = 11.357 m/s  (25.4 mph)
+  Solved cruise speed         = 26.395 m/s  (59.0 mph)
+  Wing loading  W/S           = 71.45 N/m^2
+  Min turn radius (AVL)       = 40.45 m
+  Max bank angle              = 45.2 deg
+  Steady-state roll rate      = 369.6 deg/s
 
 --- STABILITY ---
-  Static margin (AVL)         = 10.94 %
-  Short period: wn = 12.385 rad/s,  zeta = 0.445
-  Phugoid:      wn = 0.270 rad/s,  zeta = -0.007
-  Dutch roll:   wn = 6.346 rad/s,  zeta = 0.097
-  Trim elevon deflection      = 9.81 deg
+  Static margin (AVL)         = 3.49 %
+  Short period: wn = 8.101 rad/s,  zeta = 0.645
+  Phugoid:      wn = 0.297 rad/s,  zeta = -0.010
+  Dutch roll:   wn = 5.834 rad/s,  zeta = 0.096
+  Trim elevon deflection      = 12.50 deg
 
 --- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---
   Elevon HM (one side) = 0.1402 N*m  OK  (79% of capacity)

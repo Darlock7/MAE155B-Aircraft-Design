@@ -6,7 +6,7 @@ function optOut = profitOptimization(optIn)
 %   Maximizes profit per unit time J subject to stability, stall,
 %   aerodynamic mode, and physical build constraints.
 %
-% Design variables (11):
+% Design variables (13):
 %   x(1)  = Wing AR                    [-]     bounds [4, 10]
 %   x(2)  = Wing taper ratio           [-]     bounds [0.30, 0.80]
 %   x(3)  = Wing quarter-chord sweep   [deg]   bounds [0, 30]
@@ -18,6 +18,11 @@ function optOut = profitOptimization(optIn)
 %   x(9)  = Fin quarter-chord sweep    [deg]   bounds [20, 55]
 %   x(10) = Cruise speed               [m/s]   bounds [18, 28]
 %   x(11) = Cargo volume Vp            [m³]    bounds [0.001, 0.010]
+%   x(12) = Centerbody half-width      [m]     bounds [0.050, 0.300]  (cb_halfwidth)
+%   x(13) = Centerbody length          [m]     bounds [0.600, 1.000]  (cb_length)
+%
+% DERIVED PARAMETERS (auto-scaled with design):
+%   cb_xLE_m = 0.06 × cb_length  [m]  wing-fuselage join distance (motor at x=0)
 %
 % CMA-ES operates in normalized [0,1]^11 space for numerical conditioning.
 %
@@ -97,7 +102,7 @@ function optOut = profitOptimization(optIn)
 
     % ---- physical bounds ----
     %           AR    tap   swp   twst  WS    xLE   ARv  tapv  swpv  Vc    Vp    cb_hw  cb_len
-    lb = [4.0; 0.30;  0.0; -5.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
+    lb = [6.0; 0.30;  0.0; -5.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
     ub = [10.0; 0.80; 30.0; 3.0; 90.0; 0.300; 3.50; 0.70; 50.0; 28.0; 0.015; 0.300; 1.000];
     x0_def = [8.5; 0.702; 22.7; 0.0; 40.0; 0.100; 2.41; 0.400; 40.7; 24.0; 0.0060; 0.145; 0.620];
 
@@ -502,6 +507,11 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         dynIn_x.xLE_tip_m        = wingOut_x.xLE_tip_m;
         dynIn_x.y_root_m         = cb_halfwidth_m;
         dynIn_x.cb_chord_m       = cb_length_m;
+        cb_join_x = max(0.06 * cb_length_m, 0.08154122);  % constraint: preserve EH0.0/9.0 wing-join sections
+        if cb_join_x > 0.95  % fuselage LE can't be aft of fuselage TE
+            return;
+        end
+        dynIn_x.cb_xLE_m         = cb_join_x;  % wing-fuselage join distance (constrained ≥ 0.08154122 m)
         dynIn_x.semiSpan_m       = wingOut_x.semiSpan_m;
         dynIn_x.c_root_m         = wingOut_x.c_root_m;
         dynIn_x.c_tip_m          = wingOut_x.c_tip_m;

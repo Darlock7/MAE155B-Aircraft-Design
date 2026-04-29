@@ -989,16 +989,16 @@ comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 % NOTE: makePointMass(name, mass_kg, [x, y, z]) add accurate mass values 
 
 % ---- Main propulsion ----
-comp(end+1) = makePointMass('M1 Main Motor', 0.085, [0.000,  0.000,  0.000]);
-comp(end+1) = makePointMass('P1 Main Prop',  0.020, [0.000,  0.000,  0.000]);
+comp(end+1) = makePointMass('M1 Main Motor', 0.084, [0.000,  0.000,  0.000]);
+comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.161, [0.553, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.634, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.2894, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3185, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
@@ -1016,20 +1016,20 @@ x_hinge_abs = wingOut.xLE_root_m + ...
 
 z_servo_abs = wingIn.z_root_m;
 
-comp(end+1) = makePointMass('S2 Servo LHS wing', 0.009, [x_hinge_abs, -y_servo_abs, z_servo_abs]);
-comp(end+1) = makePointMass('S3 Servo RHS wing', 0.009, [x_hinge_abs,  y_servo_abs, z_servo_abs]);
+comp(end+1) = makePointMass('S2 Servo LHS wing', 0.0125, [x_hinge_abs, -y_servo_abs, z_servo_abs]);
+comp(end+1) = makePointMass('S3 Servo RHS wing', 0.0125, [x_hinge_abs,  y_servo_abs, z_servo_abs]);
 
 % ---- Center/back wing servo ----
-comp(end+1) = makePointMass('S1 Servo back wing', 0.009, [x_c4_MAC + 0.020, 0.000, wingIn.z_root_m]);
+comp(end+1) = makePointMass('S1 Servo back wing', 0.0125, [x_c4_MAC + 0.020, 0.000, wingIn.z_root_m]);
 
 % ---- Vertical stabilizer servo ----
-comp(end+1) = makePointMass('S4 Servo vertical stabilizer', 0.009, ...
+comp(end+1) = makePointMass('S4 Servo vertical stabilizer', 0.0125, ...
     [vertOut.xLE_root_v_m + 0.70*vertOut.c_root_v_m, ...
      vertOut.y_root_v_m, ...
      vertOut.z_root_v_m + 0.20*vertOut.b_v_m]);
 
 % ---- Cargo bay servo ----
-comp(end+1) = makePointMass('S5 Servo cargo bay', 0.009, [0.61980000, 0.000, 0.000]);
+comp(end+1) = makePointMass('S5 Servo cargo bay', 0.0125, [0.61980000, 0.000, 0.000]);
 
 % -------------------------------------------------------------------------
 % Wing / vertical structure lumped masses
@@ -1470,12 +1470,16 @@ dynIn.Cla_tip_per_deg  = airfoilOut.tip.Cla_per_deg;
 % Actual airfoil dat files (AVL reads camber directly; AInc = geometric twist only)
 dynIn.airfoilRootFile     = fullfile(repoRoot, 'data', 'airfoils', airfoilRootName);
 dynIn.airfoilTipFile      = fullfile(repoRoot, 'data', 'airfoils', airfoilTipName);
-dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'eh2012.dat');
+dynIn.airfoilFuselageFile = fullfile(repoRoot, 'data', 'airfoils', 'naca0012.dat');  % symmetric airfoil for pitch damping
 
 % Centerbody geometry: fixed fuselage, wing slides fwd/aft via xLE_root
-dynIn.cb_chord_m = Lf;     % [m] centerbody chord at centerline (= fuselage length)
-dynIn.cb_z_m     = 0.03;  % [m] centerbody LE height above wing plane
-dynIn.cb_xLE_m   = 0.0;    % [m] nose at origin
+% Wing-fuselage join distance scales as 6% of fuselage length
+% CONSTRAINT: Fuselage LE must be ≥ 0.08154122 m to preserve EH0.0/9.0 wing-join sections
+cb_join_distance = max(0.06 * Lf, 0.08154122);  % [m] gap from motor (x=0) to fuselage LE
+
+dynIn.cb_chord_m = Lf;          % [m] centerbody chord at centerline (= fuselage length)
+dynIn.cb_z_m     = 0.03;        % [m] centerbody LE height above wing plane
+dynIn.cb_xLE_m   = cb_join_distance;  % [m] fuselage LE x-position (motor at origin)
 
 % Flight condition
 dynIn.V_mps         = V_cruise;
