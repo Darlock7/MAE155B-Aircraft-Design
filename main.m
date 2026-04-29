@@ -720,11 +720,11 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.07;
+twistIn.static_margin  = 0.06;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 2.40;  % profit optimizer
+twistIn.twist_root_deg = 0; %2.40;  % profit optimizer
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -1007,21 +1007,44 @@ fprintf('\n================ Aircraft Mass Properties =================\n');
 
 % -------------------------------------------------------------------------
 % Fuselage-only CAD mass properties
-% Replace these with your actual fuselage-only CAD values when ready.
-% These should EXCLUDE the wings if you want wing geometry changes to update
-% the total aircraft mass properties correctly.
+% Source: Onshape fuselage-only mass properties
+%
+% IMPORTANT:
+%   These values should EXCLUDE wings/tails if wing/tail geometry is
+%   recomputed in MATLAB during optimization.
+%
+% Coordinate convention assumed:
+%   x aft, y right, z up, origin at aircraft nose/reference point.
 % -------------------------------------------------------------------------
+
 cadMass = struct();
 
 cadMass.fuselageOnly.name    = 'Fuselage CAD';
-cadMass.fuselageOnly.mass_kg = 0.634;                        % [kg] <-- replace
-cadMass.fuselageOnly.cg_m    = [0.27278876, 0.0, -5.175e-8];  % [m]  <-- replace
 
-cadMass.fuselageOnly.Icg_kgm2 =  [ ...
-     0.00279075,   1.452e-8,  -0.00042382; ...
-      1.452e-8, 0.01708973,  1.169e-8; ...
-     -0.00042382, 1.169e-8, 0.01890463 ];                             % [kg*m^2] <-- replace
+cadMass.fuselageOnly.mass_kg = 1.135;                 % [kg]
+cadMass.fuselageOnly.volume_m3 = 0.013;               % [m^3]
+cadMass.fuselageOnly.area_m2   = 0.517;               % [m^2]
 
+cadMass.fuselageOnly.cg_m = [ ...
+    0.389, ...       % x_CG [m]
+    -1.552e-6, ...   % y_CG [m]
+    0.032 ];         % z_CG [m]
+
+% Inertia tensor about fuselage CAD CG, expressed in CAD/body axes.
+% Units: [kg*m^2]
+cadMass.fuselageOnly.Icg_kgm2 = [ ...
+     0.004,      8.011e-7,  -0.002; ...
+     8.011e-7,  0.050,       1.597e-7; ...
+    -0.002,      1.597e-7,   0.052 ];
+
+% Optional cleanup: force exact symmetry to remove tiny CAD/export mismatch
+cadMass.fuselageOnly.Icg_kgm2 = 0.5 * ...
+    (cadMass.fuselageOnly.Icg_kgm2 + cadMass.fuselageOnly.Icg_kgm2.');
+
+fprintf('Fuselage CAD mass     = %.3f kg\n', cadMass.fuselageOnly.mass_kg);
+fprintf('Fuselage CAD CG       = [%.4f %.4g %.4f] m\n', cadMass.fuselageOnly.cg_m);
+fprintf('Fuselage CAD I_CG     =\n');
+disp(cadMass.fuselageOnly.Icg_kgm2);
 % -------------------------------------------------------------------------
 % Discrete point masses
 % All coordinates are ABSOLUTE aircraft coordinates [m]
@@ -1038,11 +1061,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.6, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.3, [0.15, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3150, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3306, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
