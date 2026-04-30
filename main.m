@@ -538,9 +538,9 @@ wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
-wingIn.eta_cs_start  = 0.300;   % starts at 30% semispan
-wingIn.eta_cs_end    = 0.749;   % ends at 74.9% semispan
-wingIn.cs_chord_frac = 0.450;   % 45% of local chord
+wingIn.eta_cs_start  = 0.617;   % starts at 61.7% semispan
+wingIn.eta_cs_end    = 0.949;   % ends at 94.9% semispan
+wingIn.cs_chord_frac = 0.449;   % 44.9% of local chord
 
 wingOut = wingGeometryDesign(wingIn);
 Swet_wing = 2.04 * wingOut.S_ref_m2;  % overwrite placeholder above
@@ -816,8 +816,8 @@ vertIn.rudder.enable      = true;
 vertIn.rudder.useTopOnly  = true;   % best match for winglet-like fin
 vertIn.rudder.eta_start   = 0.15;   % start at 15% of top exposed height
 vertIn.rudder.eta_end     = 0.95;   % end near tip
-vertIn.rudder.cf_root     = 0.500;  % rudder chord — CMA-ES optimized (runCSopt)
-vertIn.rudder.cf_tip      = 0.500;
+vertIn.rudder.cf_root     = 0.332;  % rudder chord — CMA-ES optimized (runCSopt)
+vertIn.rudder.cf_tip      = 0.332;
 
 % Run function
 vertOut = verticalSurfaceDesign(vertIn);
