@@ -157,7 +157,7 @@ Wf = 0.1491;                   % [m] max body width — profit optimizer (2 × c
 % ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
 Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
 Swet_fuse = 0.21672003 * (Lf * Wf) / (0.620 * 0.290);  % [m^2] scales with fuselage box area
-Swet_fin  = 0.14780168;        % [m^2] placeholder — overwritten after verticalSurfaceDesign
+Swet_fin  = 0.16496199;        % [m^2] placeholder — overwritten after verticalSurfaceDesign
 Hf = 0.10145110;               % [m] max body height
 
 % ---- wing / fin form-factor settings ----

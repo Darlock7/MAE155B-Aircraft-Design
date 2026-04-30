@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-30 09:31:51
+  Generated: 2026-04-30 09:39:28
 =================================================================
 
 --- WING PLANFORM ---
@@ -75,6 +75,6 @@
   Spar diameter (selected)    = 10 mm
   Required spar diameter      = 8.01 mm
   Bending factor of safety    = 3.89
-  Max wing deflection         = 60.5 mm  (3.8% span)
+  Max wing deflection         = 57.5 mm  (3.7% span)
 
 =================================================================
