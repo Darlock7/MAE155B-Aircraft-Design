@@ -1,0 +1,859 @@
+========= Main Sizing Code executed at: 2026-04-29 09:13:05 =======
+
+
+================ Package Volume Scaling =================
+Reference package volume Vp_ref = 0.001000 m^3
+Actual package volume    Vp     = 0.015000 m^3
+Volume scaling ratio     VPS    = 15.0000
+Baseline L/D             LD     = 11.1567
+Effective L/D            LD_eff = 11.1567
+Baseline empty wt frac   fe     = 0.4500
+Effective empty wt frac  fe_eff = 0.6000
+=========================================================
+
+================ Cargo Bay Geometry ======================
+Fuselage Length         (Lf)            = 0.9500 m
+Airfoil Type            = MH95
+Max Rectangle Width     (cargo width)   = 0.6247 m
+Max Rectangle Height    (cargo height)  = 0.1137 m
+Cargo Cross-Section Area                 = 0.071058 m^2
+Cargo Bay Volume                          = 0.067505 m^3
+----------------------------------------------------------
+
+================ Energy Calculation ======================
+Climb Energy            (E_climb)   = 4112.56 J
+Cruise Energy           (E_cruise)  = 55292.95 J
+Total Mission Energy    (E_f)       = 59405.51 J
+Total Mission Energy    (E_f)       = 16.50 Wh
+Design Energy w/Reserve (E_design)  = 68316.34 J
+Design Energy w/Reserve (E_design)  = 18.98 Wh
+----------------------------------------------------------
+
+================ Profit Per Unit Time J(x) ===============
+---------------- INPUT VARIABLES ----------------
+Reference package volume   (Vp_ref)        = 0.001000 m^3
+Payload volume             (Vp)            = 0.015000 m^3
+Volume scaling ratio       (VPS)           = 15.0000
+Payload Weight             (Wp)            = 7.8480 N
+Payload Weight             (Wp)            = 800.0 g
+Measured Energy            (Ef_measured)   = 59405.51 J
+Scaled Energy              (Ef = x20)      = 1188110.20 J
+Measured Flight Time       (Tf_measured)   = 61.00 s
+Scaled Flight Time         (Tf = x20)      = 1220.00 s
+Propulsion System Weight   (Wprop)         = 2.4334 N
+Baseline Empty Wt Fraction (fe)            = 0.4500
+Effective Empty Wt Frac.   (fe_eff)        = 0.6000
+Baseline L/D               (LD)            = 11.1567
+Effective L/D              (LD_eff)        = 11.1567
+Empty-weight penalty       (ke)            = 0.0375
+Derived Empty Weight       (We)            = 15.4221 N
+Derived Empty Weight       (We)            = 1.5721 kg
+Derived Gross Weight       (Wg)            = 25.7035 N
+Derived Gross Weight       (Wg)            = 2.6201 kg
+Derived Gross Weight [g]   (Wg_grams)      = 2620.1351 g
+-------------------------------------------------
+
+---------------- SCORE OUTPUT -------------------
+Profit per Unit Time (J) = 0.00285978 $/s
+Profit per Unit Time (J) = 10.2952 $/hr
+-------------------------------------------------
+
+================ Derived Climb / Descent Quantities ================
+Climb speed V_climb        = 11.000 m/s
+Climb angle gamma_climb    = 6.000 deg
+Climb gradient G_climb     = 0.1045
+Required climb rate        = 1.150 m/s
+Climb distance             = 1141.724 m
+Climb time                 = 104.365 s
+Descent speed V_descent    = 30.000 m/s
+Descent angle gamma_desc   = 12.000 deg
+Descent rate               = 6.237 m/s
+====================================================================
+
+================ Mission Profile ======================
+Runway length                      = 138.35 m
+Straight length used              = 140.00 m
+Target lap length                 = 407.10 m
+Geometric turn radius             = 20.23 m
+Physics-based min turn radius     = 36.47 m
+Turn radius used                  = 36.47 m
+Lap length used                   = 509.15 m
+Total mission distance            = 1527.44 m
+
+Climb rate                        = 1.15 m/s
+Descent rate                      = 6.24 m/s
+Climb angle                       = 3.30 deg
+Descent angle                     = 18.17 deg
+Climb distance                    = 520.96 m
+Descent distance                  = 91.40 m
+Liftoff station                   = 123.13 m
+Touchdown station                 = 1064.41 m
+
+
+============================================================
+PROPULSION ANALYSIS SUMMARY (APC MODE)
+============================================================
+Propeller = 10x4.5MR
+APC file = PER3_10x47SF.txt
+Battery voltage = 11.100 V
+Motor KV = 1100.0 RPM/V
+Motor Rm = 0.0730 ohm
+Motor I0 = 0.900 A
+Computed static thrust = 17.766 N
+Computed static current = 33.103 A
+Current limit = 35.000 A
+============================================================
+
+
+================ CTOL Preliminary Sizing Inputs ================
+W0                 = 22.0823 N
+AR                 = 8.000
+e                  = 0.800
+CD0                = 0.0122
+CLmax              = 0.929
+V_stall            = 12.000 m/s
+V_climb            = 11.000 m/s
+G_climb            = 0.1045
+V_turn             = 11.000 m/s
+n_maneuver         = 1.500
+================================================================
+
+
+============================================================
+CTOL PRELIMINARY SIZING SUMMARY (T/W FORM)
+============================================================
+WS_stall,max        =    79.57 N/m^2 |    1.662 lbf/ft^2
+WS_best             =    79.48 N/m^2 |    1.660 lbf/ft^2
+TW_best             =  0.47872
+WS_design           =    71.53 N/m^2 |    1.494 lbf/ft^2
+TW_design           =  0.47393
+T_design            =   10.466 N
+Governing constraint= Takeoff
+Takeoff sigma       =   1.0000
+CL_takeoff          =   1.2000
+T_avail @ climb     =   11.846 N  | T/W =  0.53643
+T_avail @ turn      =   11.846 N  | T/W =  0.53643
+Feasible @ climb?   = 1
+Feasible @ turn?    = 1
+============================================================
+
+Selected wing area S_ref      = 0.3087 m^2
+Selected wing loading         = 71.53 N/m^2
+Required thrust loading T/W   = 0.4739
+Required thrust               = 10.466 N
+Avail thrust @ climb speed    = 11.846 N
+Avail thrust @ turn speed     = 11.846 N
+Avail T/W @ climb speed       = 0.5364
+Avail T/W @ turn speed        = 0.5364
+
+================ Design Lift Coefficient =================
+Design speed V           = 20.000 m/s
+Dynamic pressure q       = 238.000 Pa
+Design lift coefficient  = 0.3498
+==========================================================
+
+
+================ Wing Geometry Design =================
+S_ref                 = 0.3087 m^2
+AR                    = 8.0000
+Span b                = 1.5715 m
+Semi-span             = 0.7858 m
+Taper ratio           = 0.6610
+Sweep c/4             = 28.300 deg
+Sweep LE              = 30.149 deg
+Sweep TE              = 25.584 deg
+Root chord            = 0.2365 m
+Tip chord             = 0.1563 m
+MAC                   = 0.1992 m
+y_MAC                 = 0.3662 m
+xLE_MAC               = 0.3035 m
+x_c/4_MAC             = 0.3533 m
+Control surface span  = 0.3528 m
+Control surface area  = 0.0309 m^2 (one side)
+=======================================================
+
+Selected full span b         = 1.5715 m
+Selected half-span b/2       = 0.7858 m
+Root chord c_root           = 0.2365 m
+Tip chord c_tip             = 0.1563 m
+Mean aerodynamic chord MAC  = 0.1992 m
+Quarter-chord sweep         = 28.300 deg
+Leading-edge sweep          = 30.149 deg
+Trailing-edge sweep         = 25.584 deg
+MAC span station y_MAC      = 0.3662 m
+MAC LE x-location xLE_MAC   = 0.3035 m
+MAC c/4 x-location          = 0.3533 m
+Tip LE x-location xLE_tip   = 0.5472 m
+
+================ Airfoil Analysis (Surrogate) ================
+Reference speed           = 20.000 m/s
+Root chord                = 0.23654 m
+Tip chord                 = 0.15635 m
+Root Reynolds number      = 3.147e+05
+Tip Reynolds number       = 2.080e+05
+Root airfoil              = e222.dat
+Tip airfoil               = e230.dat
+
+---- Root airfoil metrics ----
+Cla                       = 0.11042 per deg
+alphaL0                   = -3.27352 deg
+Cm0                       = -0.08712
+Cl_max                    = 1.23049
+Best L/D                  = 89.12976
+
+---- Tip airfoil metrics ----
+Cla                       = 0.13237 per deg
+alphaL0                   = 0.44296 deg
+Cm0                       = 0.02384
+Cl_max                    = 0.80340
+Best L/D                  = 41.83170
+
+Aerodynamic twist         = -3.71649 deg
+===============================================================
+
+================ Airfoil Polar Plots (Surrogate) ================
+Generated surrogate polar plots for root and tip airfoils.
+===================================================================
+
+
+================ Twist Function (Panknin) =================
+Twist model               = linear
+Root geometric twist      = 0.000 deg
+Tip geometric twist       = -4.035 deg
+Total twist required      = -7.751 deg
+Aerodynamic twist term    = -3.716 deg
+Geometric twist required  = -4.035 deg
+Panknin lambda = AR       = 8.0000
+Taper ratio               = 0.6610
+K1                        = 0.5671
+K2                        = 0.4329
+Numerator                 = -0.060075
+Denominator               = 0.007751
+Semi-span                 = 0.7858 m
+Number of span stations   = 200
+===========================================================
+
+
+================ Vertical Surface Sizing =================
+Sizing mode                    = tailVolumeCoeff
+Twin-fin configuration        = 1
+Airfoil                       = NACA0010
+Single-fin area               = 0.0197 m^2
+Total vertical area           = 0.0394 m^2
+Aspect ratio                  = 1.500
+Taper ratio                   = 0.100
+Quarter-chord sweep           = 65.000 deg
+Cant angle                    = 0.000 deg
+Toe angle                     = 0.000 deg
+Top area fraction             = 0.660
+Single-fin span/height        = 0.1720 m
+Single-fin root chord         = 0.2085 m
+Single-fin tip chord          = 0.0208 m
+Single-fin MAC                = 0.1402 m
+Vertical tail coeff c_v       = 0.0200
+Moment arm L_v                = 0.2460 m
+Wing c/4 ref x                = 0.3533 m
+Vert c/4 ref x (single fin)   = 0.5993 m
+Top extent above mount        = 0.1135 m
+Bottom extent below mount     = 0.0585 m
+Top tip LE location           = (0.8375, 0.8604, 0.1135) m
+Bottom tip LE location        = (0.7195, 0.8604, -0.0585) m
+---------------- Rudder (single fin) ----------------
+Rudder area                   = 0.0064 m^2
+Rudder / single-fin area      = 0.3232
+Rudder height                 = 0.0908 m
+Rudder root chord             = 0.0949 m
+Rudder tip chord              = 0.0454 m
+Rudder eta start              = 0.150
+Rudder eta end                = 0.950
+==========================================================
+
+
+================ Spanwise Aero Estimate =================
+Reference alpha            = 6.500 deg
+Dynamic pressure q         = 238.000 Pa
+Estimated semispan lift    = 26.796 N
+Estimated total wing lift  = 53.593 N
+Root local cl              = 1.0792
+Tip  local cl              = 0.2677
+Root effective alpha       = 6.500 deg
+Tip  effective alpha       = 2.465 deg
+=========================================================
+
+
+================ Drag Build-Up + Aircraft Polar =================
+Reynolds number              = 2.6497e+05
+Skin-friction coeff Cf       = 0.005801
+CD0_wing                     = 0.01272
+CD0_fuse                     = 0.00397
+CD0_fin                      = 0.00163
+Total CD0                    = 0.01831
+CLalpha_2D_avg               = 0.12139 per deg
+CLalpha_3D                   = 0.09019 per deg
+alphaL0_avg                  = -1.41528 deg
+CLmax_2D_avg                 = 1.01695
+CLmax_3D                     = 0.91525
+alpha_stall estimate         = 8.73260 deg
+CL_cruise                    = 0.34983
+alpha_cruise                 = 2.46344 deg
+CD_cruise                    = 0.02440
+L/D_cruise                   = 14.33653
+(L/D)_max                    = 16.56602
+=================================================================
+
+
+================ Aircraft Mass Properties =================
+Fuselage CAD mass     = 1.135 kg
+Fuselage CAD CG       = [0.3890 -1.552e-06 0.0320] m
+Fuselage CAD I_CG     =
+    0.0040    0.0000   -0.0020
+    0.0000    0.0500    0.0000
+   -0.0020    0.0000    0.0520
+
+Total aircraft mass           = 2.8995 kg
+Total aircraft weight         = 28.4441 N
+Aircraft CG                   = [0.3306, 0.0037, 0.0102] m
+
+Inertia tensor about aircraft CG [kg*m^2]:
+    0.1226   -0.0039   -0.0055
+   -0.0039    0.0880   -0.0003
+   -0.0055   -0.0003    0.2064
+
+Ixx = 0.122575 kg*m^2
+Iyy = 0.087951 kg*m^2
+Izz = 0.206353 kg*m^2
+Ixy = -0.003898 kg*m^2
+Ixz = -0.005494 kg*m^2
+Iyz = -0.000260 kg*m^2
+=============================================================
+
+---------------- Unloaded Mass Case ----------------
+Total unloaded mass          = 2.0995 kg
+Total unloaded weight        = 20.5961 N
+Unloaded aircraft CG         = [0.3306, 0.0051, 0.0174] m
+----------------------------------------------------
+
+================ CG Location (x_cg           = 0.3306 m
+x_LE_MAC       = 0.3035 m
+MAC            = 0.1992 m
+CG location    = 13.61 % MAC
+✅ CG in reasonable range
+=====================================================
+
+
+================ Updated Performance State =================
+Loaded weight W               = 28.4441 N
+Updated stall speed Vs        = 13.0073 m/s
+Estimated takeoff speed VTO   = 14.5426 m/s
+Takeoff CL used               = 0.7322
+Solved cruise speed           = 26.2446 m/s
+Solved cruise speed           = 58.71 mph
+Cruise CL                     = 0.22482
+Cruise CD                     = 0.02083
+Cruise L/D                    = 10.79390
+Eval climb speed              = 11.0000 m/s
+Thrust at climb speed         = 11.8456 N
+Drag at climb speed           = 2.2175 N
+Max climb gradient at Vclimb  = 0.33849
+Max climb rate at Vclimb      = 3.72339 m/s
+============================================================
+
+
+===== PERFORMANCE CONSISTENCY CHECK =====
+Design stall speed  = 12.000 m/s
+Actual stall speed  = 13.007 m/s
+Design cruise speed = 20.000 m/s
+Actual cruise speed = 26.245 m/s
+========================================
+
+
+================ Static Stability Analysis =================
+Neutral point x_NP             = 0.3533 m
+Neutral point                  = 25.00 % MAC
+
+---- Loaded case ----
+CG                            = 0.3306 m
+CG                            = 13.61 % MAC
+Static margin                 = 11.39 %
+Statically stable             = true
+In target band (10-20%)       = true
+
+---- Unloaded case ----
+CG                            = 0.3306 m
+CG                            = 13.61 % MAC
+Static margin                 = 11.39 %
+Statically stable             = true
+In target band (10-20%)       = true
+
+CG shift due to payload removal = -0.00 % MAC
+
+WARNING: Neutral point currently uses approximate wing AC only.
+         Replace with AVL / aero-based xNP before trusting final stability margins.
+==============================================================
+
+
+================ Gust Overlay =================
+Mean 2D lift-curve slope a0   = 6.9554 per rad
+Finite-wing lift slope a      = 5.1677 per rad
+Wing loading W/S              = 71.5293 N/m^2
+Mean aerodynamic chord cbar   = 0.1992 m
+Gust alleviation factor K_g   = 0.6089
+Ude at Vc                     = 9.1440 m/s
+Ude at Vd                     = 4.5720 m/s
+Delta n at Vc                 = 4.7871
+Delta n at Vd                 = 2.9919
+Positive gust load at Vc      = 5.7871
+Negative gust load at Vc      = -3.7871
+Positive gust load at Vd      = 3.9919
+Negative gust load at Vd      = -1.9919
+================================================
+
+
+================ V-n Diagram =================
+Positive CLmax              = 0.9153
+Negative CLmax              = -0.7322
+Positive stall speed Vs+    = 12.365 m/s
+Negative stall speed Vs-    = 13.824 m/s
+Maneuver speed Va           = 24.103 m/s
+Negative corner speed       = 16.931 m/s
+Cruise speed Vc             = 20.000 m/s
+Dive speed Vd               = 25.000 m/s
+Positive limit load factor  = 3.800
+Negative limit load factor  = -1.500
+================================================
+
+
+--- AVL exit status = 0 ---
+
+--- AVL command output ---
+
+ ===================================================
+  Athena Vortex Lattice  Program      Version  3.52
+  Copyright (C) 2002   Mark Drela, Harold Youngren
+
+  This software comes with ABSOLUTELY NO WARRANTY,
+    subject to the GNU General Public License.
+
+  Caveat computor
+ ===================================================
+
+ ==========================================================
+   Quit    Exit program
+
+  .OPER    Compute operating-point run cases
+  .MODE    Eigenvalue analysis of run cases
+  .TIME    Time-domain calculations
+
+   LOAD f  Read configuration input file
+   MASS f  Read mass distribution file
+   MSHO    Show mass distribution
+   CASE f  Read run case file
+
+   CINI    Clear and initialize run cases
+   MSET i  Apply mass file data to stored run case(s)
+
+  .PLOP    Plotting options
+   NAME s  Specify new configuration name
+
+ AVL   c>  
+ Reading file: C:\Users\johns\MAE155B-Aircraft-Design\AVL\w46004\g.avl  ...
+
+ Configuration: Flying-Wing Dynamic Stability                               
+
+   Building surface: Centerbody                              
+     Reading airfoil from file: C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat
+
+ File OPEN error:  C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat  
+ **   Airfoil file not found  : C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat
+ **   Using default zero-camber airfoil
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+     Reading airfoil from file: C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat
+
+ File OPEN error:  C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat  
+ **   Airfoil file not found  : C:\Users\johns\MAE155B-Aircraft-Design\data\airfoils\naca0012.dat
+ **   Using default zero-camber airfoil
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+  
+   Building duplicate image-surface: Centerbody (YDUP)                       
+
+   Building surface: Wing                                    
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+ ** dCL/da factor must be in the range 0..2 -- Setting factor to 1.0
+  
+   Building duplicate image-surface: Wing (YDUP)                             
+
+   Building surface: Vfin_R                                  
+
+   Building surface: Vfin_L                                  
+
+ Mach =    0.0588
+
+    0 Bodies
+    6 Solid surfaces
+   88 Strips
+  896 Vortices
+
+    3 Control variables
+    0 Design parameters
+
+ Initializing run cases...
+
+ AVL   c>  
+ Mass distribution read ...
+
+ Mass        =    2.900      Munit
+ Mass        =    2.900      kg
+
+ Ref. x,y,z  =   0.3306      0.3709E-02  0.1021E-01  Lunit
+ C.G. x,y,z  =   0.3306      0.3709E-02  0.1021E-01  Lunit
+ C.G. x,y,z  =   0.3306      0.3709E-02  0.1021E-01  m
+
+ Ixx -Ixy -Ixz   |   0.1226      0.3898E-02  0.5494E-02  |
+      Iyy -Iyz = |               0.8795E-01  0.2600E-03  |  kg-m^2
+           Izz   |                           0.2064      |
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Apparent mass, inertia
+
+ mxx  mxy  mxz   |    0.000       0.000       0.000      |
+      myy  myz = |               0.1816E-01 -0.1843E-17  |  kg
+           mzz   |                           0.1408      |
+
+ Ixx -Ixy -Ixz   |   0.9606E-02  0.3569E-18  0.6633E-03  |
+      Iyy -Iyz = |               0.3885E-01  0.8182E-18  |  kg-m^2
+           Izz   |                           0.6247E-02  |
+
+ Use MSET to apply these mass,inertias to run cases
+
+ AVL   c>  
+ Operation of run case 1/1:   -unnamed-                              
+ ==========================================================
+
+  variable          constraint              
+  ------------      ------------------------
+  A lpha        ->  alpha       =   0.000         
+  B eta         ->  beta        =   0.000         
+  R oll  rate   ->  pb/2V       =   0.000         
+  P itch rate   ->  qc/2V       =   0.000         
+  Y aw   rate   ->  rb/2V       =   0.000         
+  D1  elevator  ->  elevator    =   0.000         
+  D2  aileron   ->  aileron     =   0.000         
+  D3  rudder    ->  rudder      =   0.000         
+  ------------      ------------------------
+
+  C1  set level or banked  horizontal flight constraints
+  C2  set steady pitch rate (looping) flight constraints
+  M odify parameters                                    
+
+ "#" select  run case          L ist defined run cases   
+  +  add new run case          S ave run cases to file   
+  -  delete  run case          F etch run cases from file
+  N ame current run case       W rite forces to file     
+
+ eX ecute run case             I nitialize variables     
+
+  G eometry plot               T refftz Plane plot       
+
+  ST  stability derivatives    FT  total   forces        
+  SB  body-axis derivatives    FN  surface forces        
+  RE  reference quantities     FS  strip   forces (FSB bodyaxes)
+  DE  design changes           FE  element forces        
+  O ptions                     FB  body forces           
+                               HM  hinge moments         
+  OB offbody flow survey       VM  strip shear,moment    
+  MRF  machine-readable format CPOM OML surface pressures
+
+ .OPER (case 1/1)   c>  
+ Operation of run case 1/1:   -unnamed-                              
+ ==========================================================
+
+  variable          constraint              
+  ------------      ------------------------
+  A lpha        ->  alpha       =   2.463         
+  B eta         ->  beta        =   0.000         
+  R oll  rate   ->  pb/2V       =   0.000         
+  P itch rate   ->  qc/2V       =   0.000         
+  Y aw   rate   ->  rb/2V       =   0.000         
+  D1  elevator  ->  elevator    =   0.000         
+  D2  aileron   ->  aileron     =   0.000         
+  D3  rudder    ->  rudder      =   0.000         
+  ------------      ------------------------
+
+  C1  set level or banked  horizontal flight constraints
+  C2  set steady pitch rate (looping) flight constraints
+  M odify parameters                                    
+
+ "#" select  run case          L ist defined run cases   
+  +  add new run case          S ave run cases to file   
+  -  delete  run case          F etch run cases from file
+  N ame current run case       W rite forces to file     
+
+ eX ecute run case             I nitialize variables     
+
+  G eometry plot               T refftz Plane plot       
+
+  ST  stability derivatives    FT  total   forces        
+  SB  body-axis derivatives    FN  surface forces        
+  RE  reference quantities     FS  strip   forces (FSB bodyaxes)
+  DE  design changes           FE  element forces        
+  O ptions                     FB  body forces           
+                               HM  hinge moments         
+  OB offbody flow survey       VM  strip shear,moment    
+  MRF  machine-readable format CPOM OML surface pressures
+
+ .OPER (case 1/1)   c>    Building normalwash AIC matrix...
+  Factoring normalwash AIC matrix...
+  Building source+doublet strength AIC matrix...
+  Building source+doublet velocity AIC matrix...
+  Building bound-vortex velocity matrix...
+
+ iter d(alpha)   d(beta)    d(pb/2V)   d(qc/2V)   d(rb/2V)   elevator   aileron    rudder     
+   1 -0.000E+00 -0.000E+00  0.000E+00 -0.000E+00  0.000E+00 -0.000E+00 -0.000E+00 -0.000E+00
+ ---------------------------------------------------------------
+ Vortex Lattice Output -- Total Forces
+
+ Configuration: Flying-Wing Dynamic Stability                               
+     # Surfaces =   6
+     # Strips   =  88
+     # Vortices = 896
+
+  Sref = 0.30872       Cref = 0.19917       Bref =  1.5715    
+  Xref = 0.33058       Yref = 0.37090E-02   Zref = 0.10209E-01
+
+ Standard axis orientation,  X fwd, Z down         
+
+ Run case:  -unnamed-                              
+
+  Alpha =   2.46344     pb/2V =  -0.00000     p'b/2V =  -0.00000
+  Beta  =   0.00000     qc/2V =   0.00000
+  Mach  =     0.059     rb/2V =  -0.00000     r'b/2V =  -0.00000
+
+  CXtot =   0.00407     Cltot =   0.00040     Cl'tot =   0.00040
+  CYtot =  -0.00000     Cmtot =   0.04570
+  CZtot =  -0.17103     Cntot =   0.00001     Cn'tot =  -0.00001
+
+  CLtot =   0.17105
+  CDtot =   0.00329
+  CDvis =   0.00000     CDind = 0.0032892
+  CLff  =   0.17171     CDff  = 0.0032955    | Trefftz
+  CYff  =  -0.00000         e =    0.3560    | Plane  
+
+   elevator        =   0.00000
+   aileron         =   0.00000
+   rudder          =   0.00000
+
+ ---------------------------------------------------------------
+
+ Operation of run case 1/1:   -unnamed-                              
+ ==========================================================
+
+  variable          constraint              
+  ------------      ------------------------
+  A lpha        ->  alpha       =   2.463         
+  B eta         ->  beta        =   0.000         
+  R oll  rate   ->  pb/2V       =   0.000         
+  P itch rate   ->  qc/2V       =   0.000         
+  Y aw   rate   ->  rb/2V       =   0.000         
+  D1  elevator  ->  elevator    =   0.000         
+  D2  aileron   ->  aileron     =   0.000         
+  D3  rudder    ->  rudder      =   0.000         
+  ------------      ------------------------
+
+  C1  set level or banked  horizontal flight constraints
+  C2  set steady pitch rate (looping) flight constraints
+  M odify parameters                                    
+
+ "#" select  run case          L ist defined run cases   
+  +  add new run case          S ave run cases to file   
+  -  delete  run case          F etch run cases from file
+  N ame current run case       W rite forces to file     
+
+ eX ecute run case             I nitialize variables     
+
+  G eometry plot               T refftz Plane plot       
+
+  ST  stability derivatives    FT  total   forces        
+  SB  body-axis derivatives    FN  surface forces        
+  RE  reference quantities     FS  strip   forces (FSB bodyaxes)
+  DE  design changes           FE  element forces        
+  O ptions                     FB  body forces           
+                               HM  hinge moments         
+  OB offbody flow survey       VM  strip shear,moment    
+  MRF  machine-readable format CPOM OML surface pressures
+
+ .OPER (case 1/1)   c>  
+Enter filename, or <return> for screen output   s>  
+ Operation of run case 1/1:   -unnamed-                              
+ ==========================================================
+
+  variable          constraint              
+  ------------      ------------------------
+  A lpha        ->  alpha       =   2.463         
+  B eta         ->  beta        =   0.000         
+  R oll  rate   ->  pb/2V       =   0.000         
+  P itch rate   ->  qc/2V       =   0.000         
+  Y aw   rate   ->  rb/2V       =   0.000         
+  D1  elevator  ->  elevator    =   0.000         
+  D2  aileron   ->  aileron     =   0.000         
+  D3  rudder    ->  rudder      =   0.000         
+  ------------      ------------------------
+
+  C1  set level or banked  horizontal flight constraints
+  C2  set steady pitch rate (looping) flight constraints
+  M odify parameters                                    
+
+ "#" select  run case          L ist defined run cases   
+  +  add new run case          S ave run cases to file   
+  -  delete  run case          F etch run cases from file
+  N ame current run case       W rite forces to file     
+
+ eX ecute run case             I nitialize variables     
+
+  G eometry plot               T refftz Plane plot       
+
+  ST  stability derivatives    FT  total   forces        
+  SB  body-axis derivatives    FN  surface forces        
+  RE  reference quantities     FS  strip   forces (FSB bodyaxes)
+  DE  design changes           FE  element forces        
+  O ptions                     FB  body forces           
+                               HM  hinge moments         
+  OB offbody flow survey       VM  strip shear,moment    
+  MRF  machine-readable format CPOM OML surface pressures
+
+ .OPER (case 1/1)   c>  
+ AVL   c>  
+
+--- Parsed derivatives ---
+CL0=0.17105  CD0=0.00329
+CLa=3.93466  Cma=-0.44725  Cmq=-4.39273
+CYb=-0.21780  Clb=-0.00842  Cnb=0.04805
+
+--- Longitudinal eigenvalues ---
+  -4.3301 + 8.4453i
+  -4.3301 - 8.4453i
+   0.0136 + 0.4185i
+   0.0136 - 0.4185i
+
+
+--- Lateral eigenvalues ---
+ -23.9069 + 0.0000i
+  -0.4789 + 5.2058i
+  -0.4789 - 5.2058i
+   0.0332 + 0.0000i
+
+
+================ LONGITUDINAL HANDLING QUALITY =================
+Short Period:
+  lambda = -4.3301 +8.4453i
+  wn     = 9.4907 rad/s
+  zeta   = 0.4562
+  period = 0.7440 s
+  ts2%   = 0.9238 s
+  HQ     = Level 1 (zeta 0.35-1.30, Phase A/C)
+
+Phugoid:
+  lambda = +0.0136 -0.4185i
+  wn     = 0.4187 rad/s
+  zeta   = -0.0326
+  period = 15.0130 s
+  HQ     = UNSTABLE
+
+================ LATERAL HANDLING QUALITY ======================
+Dutch Roll:
+  lambda   = -0.4789 +5.2058i
+  wn       = 5.2278 rad/s
+  zeta     = 0.0916
+  zeta*wn  = 0.4789 rad/s
+  HQ       = Level 2 first-cut
+
+Roll Subsidence:
+  lambda   = -23.906905
+  tau      = 0.0418 s
+  t_half   = 0.0290 s
+  HQ       = Level 1 (tau <= 1.0 s)
+
+Spiral Mode:
+  lambda   = +0.033193
+  tau      = 30.1270 s
+  t_double = 20.8825 s
+  HQ       = Level 1 (t_double >= 20 s)
+
+--- Plot flag check ---
+doPlot = 1
+Reached plotting section.
+Generating dynamic stability plots...
+
+================ DYNAMIC STABILITY SUMMARY =================
+Short period: wn=9.491 rad/s, zeta=0.456
+Phugoid:      wn=0.419 rad/s, zeta=-0.033
+Dutch roll:   wn=5.228 rad/s, zeta=0.092
+Roll subside: tau=0.042 s
+Spiral:       t_double=20.9 s
+=============================================================
+
+
+================ SM CORRECTION ADVISOR =================
+  Current SM (AVL)             = 11.37%
+  Target SM                    = 7.5%  (5-10% band midpoint)
+  Required battery x-position  = 0.692 m  (fuselage = 0 to 0.95 m)
+  --> Move battery to x = 0.692 m  (currently 0.553 m)
+=========================================================
+
+
+============= CONTROL SURFACE SIZING ================
+--- Elevon (pitch / roll) ---
+  Trim deflection          = +4.96 deg  (+ = TE down)
+  Max deflection           = +/-20 deg
+  CL increment at de_max   = 0.3352
+  Max load factor          = 1.96 g  (limited by elevon)
+  Max bank angle           = 59.3 deg
+  Minimum turn radius      = 24.2 m  (at V=20 m/s)
+--- Aileron ---
+  Steady-state roll rate   = 294.6 deg/s  (at da=20 deg)
+  Adverse yaw (Cnda*da)    = 0.00136  (small = good)
+--- Rudder ---
+  Max yaw moment           = 0.0058 N*m  (at dr=25 deg)
+  Cndr (per deg)           = 0.000002
+--- Hinge Moments vs SG90 (0.177 N*m at 4.8V) ---
+  Elevon HM (one side)     = 0.1122 N*m  (de_max=20 deg)
+  Elevon servo             = OK  (63% of SG90 capacity)
+  Rudder HM (one fin)      = 0.0232 N*m  (dr_max=25 deg)
+  Rudder servo             = OK  (13% of SG90 capacity)
+======================================================
+
+
+================ STRUCTURE SIZING =================
+Max bending moment at root = 5.049 Nm
+Required spar diameter = 0.0080 m (8.01 mm)
+Selected spar diameter = 10.00 mm
+Actual bending stress = 51.43 MPa
+Factor of Safety = 3.89
+✅ BENDING SAFE
+Max wing deflection = 0.0605 m
+✅ DEFLECTION OK (<5% span)
+Shear stress = 0.16 MPa
+Landing impact force = 63.57 N
+Estimated spar mass = 0.197 kg
+
+✅ FINAL STRUCTURE DESIGN SAFE
+=====================================================
+
+
+================ PROFIT RE-EVALUATION (Actual Physics) =================
+  Parametric J (early script)  = +10.2952 $/hr   [LD=11.16, Wg=2620g]
+  Physics-based J              = +10.7348 $/hr   [LD=14.34, Wg=2900g]
+  Actual cruise L/D            = 14.337
+  Actual gross weight          = 2899.5 g
+
+  Constrained optimum (SM>=5%) = 1200 g   (J = 12.5290 $/hr,  SM = 13.9%)
+  Current payload weight        = 800 g   (J = 10.7348 $/hr,  SM = 11.4%)
+  Stall speed at optimum        = 13.88 m/s  (design limit = 12.00 m/s)
+  *** Optimal Wp raises stall speed >10% above design — check CTOL runway length ***
+=======================================================================
+
+
+ Manufacturing dimension sheet written to:
+   C:\Users\johns\MAE155B-Aircraft-Design\outputs\manufacturing_dimensions.txt
+
+>> 
