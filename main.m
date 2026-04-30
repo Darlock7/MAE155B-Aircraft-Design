@@ -64,7 +64,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = true;  % true = show all figures throughout the script
+showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
 viewGeometry    = false;   % true = open AVL 3D viewer before stability run
@@ -210,6 +210,7 @@ end
 
 cargoIn = struct();
 cargoIn.L_fuse_m = Lf;              % [m] fuselage length from design vars
+cargoIn.W_fuse_m = Wf;              % [m] fuselage width from design vars
 cargoIn.airfoilFile = cargoAirfoilFile;
 cargoIn.showPlot = showPlots;       % show the cargo bay cross-section plot
 
@@ -720,11 +721,11 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.07;
+twistIn.static_margin  = 0.12;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 2.40;  % profit optimizer
+twistIn.twist_root_deg = 0;  % profit optimizer
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -1038,11 +1039,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.6, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.140, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3150, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3437, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
