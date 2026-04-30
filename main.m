@@ -73,7 +73,7 @@ repoRoot = fileparts(mfilename('fullpath'));
 showPlots       = true;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = true;   % true = open AVL 3D viewer before stability run
+viewGeometry    = false;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -640,7 +640,7 @@ rootPolarPlot = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilRootName, Re_r
 tipPolarPlot  = evaluateAirfoilSurrogate(airfoilDB_cached, airfoilTipName,  Re_tip,  alpha_plot_deg);
 
 % -------- 1) CL vs alpha --------
-figure;
+figure('Name','Airfoil Lift Curve (Root & Tip)','NumberTitle','off');
 plot(rootPolarPlot.alpha_deg, rootPolarPlot.CL, 'LineWidth', 2); hold on;
 plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CL,  'LineWidth', 2);
 grid on;
@@ -652,7 +652,7 @@ legend(sprintf('Root: %s', rootPolarPlot.name), ...
        'Location','best');
 
 % -------- 2) CD vs alpha --------
-figure;
+figure('Name','Airfoil Drag Curve (Root & Tip)','NumberTitle','off');
 plot(rootPolarPlot.alpha_deg, rootPolarPlot.CD, 'LineWidth', 2); hold on;
 plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CD,  'LineWidth', 2);
 grid on;
@@ -664,7 +664,7 @@ legend(sprintf('Root: %s', rootPolarPlot.name), ...
        'Location','best');
 
 % -------- 3) CM vs alpha --------
-figure;
+figure('Name','Airfoil Pitching Moment Curve (Root & Tip)','NumberTitle','off');
 plot(rootPolarPlot.alpha_deg, rootPolarPlot.CM, 'LineWidth', 2); hold on;
 plot(tipPolarPlot.alpha_deg,  tipPolarPlot.CM,  'LineWidth', 2);
 grid on;
@@ -676,7 +676,7 @@ legend(sprintf('Root: %s', rootPolarPlot.name), ...
        'Location','best');
 
 % -------- 4) Drag polar: CL vs CD --------
-figure;
+figure('Name','Airfoil Drag Polar (Root & Tip)','NumberTitle','off');
 plot(rootPolarPlot.CD, rootPolarPlot.CL, 'LineWidth', 2); hold on;
 plot(tipPolarPlot.CD,  tipPolarPlot.CL,  'LineWidth', 2);
 grid on;
@@ -694,7 +694,7 @@ LD_tip  = tipPolarPlot.CL  ./ tipPolarPlot.CD;
 LD_root(~isfinite(LD_root)) = nan;
 LD_tip(~isfinite(LD_tip))   = nan;
 
-figure;
+figure('Name','Airfoil L/D Ratio (Root & Tip)','NumberTitle','off');
 plot(rootPolarPlot.alpha_deg, LD_root, 'LineWidth', 2); hold on;
 plot(tipPolarPlot.alpha_deg,  LD_tip,  'LineWidth', 2);
 grid on;

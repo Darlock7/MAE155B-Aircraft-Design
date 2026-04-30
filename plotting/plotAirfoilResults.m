@@ -7,7 +7,7 @@ function plotAirfoilResults(airfoilOut)
     tip  = airfoilOut.tip;
 
     %% -------- CL vs alpha --------
-    figure;
+    figure('Name','Airfoil Lift Curve (Root & Tip)','NumberTitle','off');
     plot(root.alpha_deg, root.CL, 'LineWidth',2); hold on;
     plot(tip.alpha_deg,  tip.CL,  'LineWidth',2);
     grid on;
@@ -17,7 +17,7 @@ function plotAirfoilResults(airfoilOut)
     legend(['Root: ' root.name], ['Tip: ' tip.name], 'Location','Best');
 
     %% -------- CD vs alpha --------
-    figure;
+    figure('Name','Airfoil Drag Curve (Root & Tip)','NumberTitle','off');
     plot(root.alpha_deg, root.CD, 'LineWidth',2); hold on;
     plot(tip.alpha_deg,  tip.CD,  'LineWidth',2);
     grid on;
@@ -27,7 +27,7 @@ function plotAirfoilResults(airfoilOut)
     legend(['Root: ' root.name], ['Tip: ' tip.name], 'Location','Best');
 
     %% -------- CM vs alpha (CRITICAL) --------
-    figure;
+    figure('Name','Airfoil Pitching Moment Curve (Root & Tip)','NumberTitle','off');
     plot(root.alpha_deg, root.CM, 'LineWidth',2); hold on;
     plot(tip.alpha_deg,  tip.CM,  'LineWidth',2);
     grid on;

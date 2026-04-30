@@ -64,7 +64,8 @@ function plotAircraftGeometry3D(geom3DIn)
     semiSpan = y_tip - y_root;
 
     %% ---------------- Figure ----------------
-    figure; hold on; grid on; axis equal;
+    figure('Name','Aircraft Geometry 3D View','NumberTitle','off');
+    hold on; grid on; axis equal;
     view(35,24);
     xlabel('x [m]');
     ylabel('y [m]');

@@ -94,7 +94,7 @@ function vnOut = plotVNDiagram(vnIn)
     % make plot
     %% ---------------------------
 if vnIn.makeFigure
-    figure;
+    figure('Name','V-n Diagram (Maneuver Envelope)','NumberTitle','off');
     hold on;
 
     helperColor = [0.7 0.7 0.7];
