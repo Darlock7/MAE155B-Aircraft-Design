@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-30 00:21:27
+  Generated: 2026-04-30 00:34:56
 =================================================================
 
 --- WING PLANFORM ---
@@ -46,26 +46,26 @@
 --- MASS AND CG ---
   Total mass (loaded)         = 2.7495 kg  (6.062 lb)
   Total mass (unloaded)       = 1.9495 kg  (4.298 lb)
-  CG loaded   x (from nose)   = 0.3437 m  (13.53 in)
+  CG loaded   x (from nose)   = 0.3368 m  (13.26 in)
   CG loaded   y (from CL)     = 0.0039 m  (0.15 in)
-  CG loaded   % MAC           = 20.20 %
-  CG unloaded x (from nose)   = 0.3437 m  (13.53 in)
+  CG loaded   % MAC           = 16.73 %
+  CG unloaded x (from nose)   = 0.3368 m  (13.26 in)
 
 --- PERFORMANCE ---
   Design cruise speed         = 20.000 m/s  (44.7 mph)
   Stall speed (loaded)        = 12.666 m/s  (28.3 mph)
   Solved cruise speed         = 26.285 m/s  (58.8 mph)
   Wing loading  W/S           = 87.37 N/m^2
-  Min turn radius (AVL)       = 32.99 m
-  Max bank angle              = 51.0 deg
-  Steady-state roll rate      = 294.5 deg/s
+  Min turn radius (AVL)       = 24.73 m
+  Max bank angle              = 58.8 deg
+  Steady-state roll rate      = 294.6 deg/s
 
 --- STABILITY ---
-  Static margin (AVL)         = 4.75 %
-  Short period: wn = 7.095 rad/s,  zeta = 0.619
-  Phugoid:      wn = 0.281 rad/s,  zeta = -0.034
-  Dutch roll:   wn = 5.135 rad/s,  zeta = 0.088
-  Trim elevon deflection      = 10.76 deg
+  Static margin (AVL)         = 8.22 %
+  Short period: wn = 8.300 rad/s,  zeta = 0.524
+  Phugoid:      wn = 0.429 rad/s,  zeta = -0.038
+  Dutch roll:   wn = 5.174 rad/s,  zeta = 0.093
+  Trim elevon deflection      = 5.43 deg
 
 --- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---
   Elevon HM (one side) = 0.1122 N*m  OK  (63% of capacity)

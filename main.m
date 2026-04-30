@@ -721,7 +721,7 @@ twistIn.Cm_tip           = airfoilOut.tip.Cm0;
 
 % Design condition inputs
 twistIn.CL_design      = CLdesign;
-twistIn.static_margin  = 0.12;
+twistIn.static_margin  = 0.05;
 
 % Distribution settings
 twistIn.model          = 'linear';
@@ -1039,11 +1039,11 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.140, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.05, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
-comp(end+1) = makePointMass('Payload', Wp/g, [0.3437, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('Payload', Wp/g, [0.3368, 0.000, -0.01750000/2]);
 
 % *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
 % dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
