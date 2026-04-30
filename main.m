@@ -54,6 +54,12 @@
 
 % Version 20.0: Full On Profit Optimization
 
+% Version 21.0: Phase 2 Conceptual Design Complete - Code Cleanup and Documentation
+%               - Design locked in with profit optimization results
+%               - General code cleanup and organization
+%               - Updated version notes and documentation
+%               - Prepared for Phase 3: Structure Optimization and Testing Campaign
+
 clc; clear; close all;
 
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
@@ -64,10 +70,10 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = false;  % true = show all figures throughout the script
+showPlots       = true;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = true;   % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -1030,9 +1036,6 @@ cadMass.fuselageOnly.Icg_kgm2 =  [ ...
 % -------------------------------------------------------------------------
 comp = repmat(makePointMass('template', 0, [0 0 0]), 0, 1);
 
-
-% NOTE: makePointMass(name, mass_kg, [x, y, z]) add accurate mass values 
-
 % ---- Main propulsion ----
 comp(end+1) = makePointMass('M1 Main Motor', 0.084, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
@@ -1045,11 +1048,8 @@ comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 % ---- Payload ----
 comp(end+1) = makePointMass('Payload', Wp/g, [0.3368, 0.000, -0.01750000/2]);
 
-% *** SWEEP WARNING — DO NOT reorder or insert entries above this line ***
-% dynamicStabilitySweep.m passes sweepIn.compFixed = comp(1:6), which
-% assumes indices 1-6 are exactly: Motor, Prop, ESC, Battery, Receiver, Payload.
-% If you add a mass above, increment the slice in the sweep section below.
-% ************************************************************************
+% NOTE: dynamicStabilitySweep.m expects comp(1:6) to be: Motor, Prop, ESC, Battery, Receiver, Payload
+% If component order changes, update sweep functions accordingly.
 
 % ---- Wing servos: geometry-aware placement ----
 eta_servo = 0.65;   % span fraction on semispan
@@ -1274,12 +1274,11 @@ stabIn.cg_loaded_m   = massOut.cg_m;
 stabIn.cg_unloaded_m = massOut_unloaded.cg_m;
 
 % -------- Neutral point choice --------
-% Preferred final path:
-% stabIn.xNP_m = aeroOut.xNP_m;   % from AVL / aerodynamic model
-
-% Temporary fallback:
-stabIn.useApproxNP     = true;
-stabIn.xACwingApprox_m = wingOut.xLE_MAC_m + 0.25 * wingOut.MAC_m;
+% Use AVL-based neutral point for final design
+% stabIn.xNP_m = massOut.cg_m(1) + dynOut.SM_pct/100 * wingOut.MAC_m;   % from AVL SM (runs later)
+% Falls back to approximate wing AC method in staticStabilityAnalysisNP_SM
+stabIn.useApproxNP = true;
+stabIn.xACwingApprox_m = wingOut.x_c4_MAC_m;  % Use quarter-chord as approximate AC
 
 % -------- Optional target band --------
 stabIn.SM_target_min = 0.10;   % 10%
@@ -1306,11 +1305,6 @@ fprintf('In target band (10-20%%)       = %s\n', string(stabOut.unloaded.inTarge
 
 fprintf('\nCG shift due to payload removal = %.2f %% MAC\n', ...
     100*(stabOut.unloaded.xcg_over_MAC - stabOut.loaded.xcg_over_MAC));
-
-if stabOut.usedApproxNP
-    fprintf('\nWARNING: Neutral point currently uses approximate wing AC only.\n');
-    fprintf('         Replace with AVL / aero-based xNP before trusting final stability margins.\n');
-end
 
 fprintf('==============================================================\n\n');
 

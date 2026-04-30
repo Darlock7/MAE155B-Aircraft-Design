@@ -3,7 +3,7 @@
 **Course:** MAE 155B — Aircraft Design  
 **Team:** Harshil Patel, John Sigafoos, Angel Ochoa, Juan Sanchez, Sara Chowdhury, Analisa Veloz  
 **Mission:** Small RC aircraft for package delivery, optimized around a profit function  
-**Phase:** Conceptual and preliminary design  
+**Phase:** Conceptual and preliminary design complete - transitioning to Phase 3: Structure optimization and testing campaign  
 
 ---
 
