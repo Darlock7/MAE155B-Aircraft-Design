@@ -796,7 +796,7 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % ---------- User-selected shape ----------
 vertIn.AR_v           = 1.500; % delta winglet
 vertIn.taper_v        = 0.100; % delta winglet
-vertIn.sweep_c4_v_deg = 65.0;  % delta winglet
+vertIn.sweep_c4_v_deg = 60.0;  % delta winglet
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;

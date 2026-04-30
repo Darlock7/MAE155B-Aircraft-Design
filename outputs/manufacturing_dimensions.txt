@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-04-30 08:32:01
+  Generated: 2026-04-30 09:31:51
 =================================================================
 
 --- WING PLANFORM ---
@@ -31,7 +31,7 @@
   MAC                MAC_v    = 0.1402 m  (5.52 in)
   Aspect ratio                = 1.500
   Taper ratio                 = 0.100
-  Quarter-chord sweep         = 65.00 deg
+  Quarter-chord sweep         = 60.00 deg
   Mount x (at wing-tip LE)    = 0.5472 m  (21.54 in) from nose
   Mount y (wing tip)          = 0.8604 m  (33.87 in) from CL
   Twin fins                   = 1
@@ -56,16 +56,16 @@
   Stall speed (loaded)        = 12.666 m/s  (28.3 mph)
   Solved cruise speed         = 26.285 m/s  (58.8 mph)
   Wing loading  W/S           = 87.37 N/m^2
-  Min turn radius (AVL)       = 24.73 m
+  Min turn radius (AVL)       = 24.71 m
   Max bank angle              = 58.8 deg
-  Steady-state roll rate      = 294.6 deg/s
+  Steady-state roll rate      = 294.3 deg/s
 
 --- STABILITY ---
-  Static margin (AVL)         = 8.22 %
-  Short period: wn = 8.300 rad/s,  zeta = 0.524
-  Phugoid:      wn = 0.429 rad/s,  zeta = -0.038
-  Dutch roll:   wn = 5.174 rad/s,  zeta = 0.093
-  Trim elevon deflection      = 5.43 deg
+  Static margin (AVL)         = 8.28 %
+  Short period: wn = 8.324 rad/s,  zeta = 0.523
+  Phugoid:      wn = 0.430 rad/s,  zeta = -0.038
+  Dutch roll:   wn = 5.217 rad/s,  zeta = 0.093
+  Trim elevon deflection      = 5.42 deg
 
 --- SERVO CHECK  (SG90: 1.8 kg*cm = 0.177 N*m at 4.8V) ---
   Elevon HM (one side) = 0.1122 N*m  OK  (63% of capacity)
