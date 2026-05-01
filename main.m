@@ -1730,9 +1730,100 @@ if runOptimization
     optOut = optimizeDynamicStability(optIn);
 end
 
-%% ============== Advanced Aerodynamics (CFD) ============
+%% ============== CFD Analysis Setup (ANSYS Fluent) ============
 
-%% ============= Structure Sizing ==============
+fprintf('\n================ CFD ANALYSIS SETUP ================\n');
+fprintf('Flight envelope conditions for ANSYS Fluent simulations\n\n');
+
+% Flight conditions from V-n diagram and aerodynamic polar
+V_conditions = struct();
+if perfOut.validCruise
+    V_conditions.cruise = perfOut.Vcruise_mps;  % solved cruise speed [m/s]
+else
+    V_conditions.cruise = V_cruise;  % fallback to design cruise speed
+end
+V_conditions.stall_pos = vnOut.Vs_pos_mps;     % positive stall speed [m/s]
+V_conditions.maneuver  = vnOut.Va_mps;         % maneuver speed [m/s]
+V_conditions.dive      = vnOut.Vd_mps;         % dive speed [m/s]
+
+% Atmosphere (sea level standard)
+a_sound_mps = sqrt(1.4 * 287 * 288.15);  % speed of sound at sea level [m/s]
+
+% Create table for CFD conditions
+fprintf('%-20s %8s %8s %10s %10s %8s %8s %8s\n', ...
+    'Flight Condition', 'V [m/s]', 'Re_MAC', 'q [Pa]', 'Mach', 'alpha [°]', 'u [m/s]', 'v [m/s]');
+fprintf('%s\n', repmat('-', 1, 88));
+
+cfd_conditions = {};
+cond_names = {'Cruise', 'Stall (pos)', 'Maneuver (Va)', 'Dive (Vd)'};
+cond_speeds = [V_conditions.cruise, V_conditions.stall_pos, V_conditions.maneuver, V_conditions.dive];
+cond_alphas = [aeroOut.alpha_cruise_deg, aeroOut.alpha_stall_deg, 0, 0];  % AoA at each condition
+
+for i = 1:length(cond_names)
+    V_i = cond_speeds(i);
+    alpha_i = cond_alphas(i);
+
+    % Reynolds number based on MAC
+    Re_MAC_i = rho * V_i * MAC / mu;
+
+    % Dynamic pressure [Pa]
+    q_i = 0.5 * rho * V_i^2;
+
+    % Mach number
+    M_i = V_i / a_sound_mps;
+
+    % Velocity components (body-fixed axes, level unaccelerated flight)
+    % u: forward velocity, v: lateral (zero for symmetric flight), w: vertical (zero for level flight)
+    u_i = V_i * cosd(alpha_i);
+    v_i = 0;
+    w_i = V_i * sind(alpha_i);
+
+    % Store for output
+    cfd_conditions{i} = struct('name', cond_names{i}, 'V_mps', V_i, 'Re_MAC', Re_MAC_i, ...
+        'q_Pa', q_i, 'M', M_i, 'alpha_deg', alpha_i, 'u_mps', u_i, 'v_mps', v_i, 'w_mps', w_i);
+
+    fprintf('%-20s %8.3f %10.2e %10.1f %8.4f %8.2f %8.3f %8.3f\n', ...
+        cond_names{i}, V_i, Re_MAC_i, q_i, M_i, alpha_i, u_i, v_i);
+end
+
+fprintf('%s\n\n', repmat('-', 1, 88));
+
+% Detailed output for each condition (for copy-paste into Fluent)
+fprintf('\n================ DETAILED CFD INPUT VALUES ================\n\n');
+
+for i = 1:length(cfd_conditions)
+    cond = cfd_conditions{i};
+    fprintf('--- %s ---\n', cond.name);
+    fprintf('  Flight speed V             = %.4f m/s\n', cond.V_mps);
+    fprintf('  Angle of attack            = %.4f deg\n', cond.alpha_deg);
+    fprintf('  Reynolds number (MAC)      = %.4e  (based on MAC = %.4f m)\n', cond.Re_MAC, MAC);
+    fprintf('  Dynamic pressure q         = %.2f Pa\n', cond.q_Pa);
+    fprintf('  Mach number                = %.4f\n', cond.M);
+    fprintf('  Velocity components (body-fixed frame):\n');
+    fprintf('    u (forward)              = %.4f m/s\n', cond.u_mps);
+    fprintf('    v (lateral)              = %.4f m/s  [zero for symmetric flight]\n', cond.v_mps);
+    fprintf('    w (vertical)             = %.4f m/s\n', cond.w_mps);
+    fprintf('  Reference area             = %.4f m^2\n', S_ref);
+    fprintf('  Density (sea level)        = %.4f kg/m^3\n', rho);
+    fprintf('  Dynamic viscosity          = %.4e Pa*s\n', mu);
+    fprintf('\n');
+end
+
+fprintf('=================================================================\n\n');
+
+% Summary for mesh resolution guidance
+fprintf('================ CFD MESH GUIDANCE ================\n');
+fprintf('Recommended y+ for wall-resolved LES/RANS:\n');
+
+for i = 1:length(cfd_conditions)
+    cond = cfd_conditions{i};
+    tau_wall_est = 0.5 * rho * cond.V_mps^2 * 0.002;  % rough estimate, Cf ~ 0.002
+    u_tau = sqrt(tau_wall_est / rho);
+    y_plus_1 = mu / (rho * u_tau);
+    fprintf('  %-20s: y+ < 1 requires dy ~ %.2e m (at leading edge)\n', cond.name, y_plus_1);
+end
+
+fprintf('================================================\n\n');
 %% ============= STRUCTURE SIZING (FINAL) ==============
 
 fprintf('\n================ STRUCTURE SIZING =================\n');
