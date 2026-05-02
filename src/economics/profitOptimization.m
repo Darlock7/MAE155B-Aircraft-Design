@@ -8,9 +8,9 @@ function optOut = profitOptimization(optIn)
 
     % ---- physical bounds ----
     %         AR    tap   swp   twst  WS    xLE   ARv  tapv  swpv  Vc    Vp    cb_hw  cb_len
-    lb =     [7.0; 0.30;  0.0; 0.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
-    ub =     [10.0; 0.80; 35.0; -3.0; 90.0; 0.300; 3.50; 0.70; 50.0; 28.0; 0.015; 0.300; 1.000];
-    x0_def = [8.5; 0.702; 22.7; 0.0; 40.0; 0.100; 2.41; 0.400; 40.7; 24.0; 0.0060; 0.145; 0.620];
+    lb =     [4.0; 0.50;  0.0; -1.0; 20.0; 0.030; 2.00; 0.30; 20.0; 20.0; 0.001; 0.050; 0.600];
+    ub =     [10.0; 0.80; 35.0; -3.0; 90.0; 0.300; 2.50; 0.70; 45.0; 28.0; 0.030; 0.200; 1.000];
+    x0_def = [7.144; 0.305; 22.8; -0.04; 61.65; 0.1071; 2.20; 0.588; 35.0; 20.754; 0.015; 0.0993; 0.9793];
 
     if ~isfield(optIn,'x0'),              optIn.x0              = x0_def;  end
     if ~isfield(optIn,'sigma0'),          optIn.sigma0          = 0.15;    end
@@ -29,6 +29,12 @@ function optOut = profitOptimization(optIn)
     if ~isfield(optIn,'Vs_margin_fac'),   optIn.Vs_margin_fac   = 1.30;    end
     if ~isfield(optIn,'Wg_max_N'),        optIn.Wg_max_N        = 60.0;    end
     if ~isfield(optIn,'debugObj'),        optIn.debugObj        = false;   end
+    if ~isfield(optIn,'V_climb_mps'),    optIn.V_climb_mps    = 13.0;    end
+    if ~isfield(optIn,'G_climb'),        optIn.G_climb        = 0.1045;  end  % sin(6 deg)
+    if ~isfield(optIn,'n_turn'),         optIn.n_turn         = 1.5;     end
+    if ~isfield(optIn,'V_turn_mps'),     optIn.V_turn_mps     = 13.0;    end
+    if ~isfield(optIn,'T_vec_mps'),      optIn.T_vec_mps      = [0; 30];    end
+    if ~isfield(optIn,'T_vec_N'),        optIn.T_vec_N        = [17.766; 0]; end
 
     n = numel(lb);
 
@@ -89,10 +95,10 @@ function optOut = profitOptimization(optIn)
     fprintf('  Rough estimate: %.0f–%.0f min total (AVL ~2 s/call, parfor)\n\n', ...
         lam*2*optIn.maxGen/60*0.4, lam*2*optIn.maxGen/60);
 
-    fprintf('%-6s %-9s %-10s %-10s %-8s %-8s %-8s %-7s %-7s %-9s %-10s\n', ...
-        'Gen','Done[%]','Elapsed','BestJ/hr','SM[%]','Vs[m/s]', ...
+    fprintf('%-6s %-9s %-10s %-10s %-10s %-8s %-8s %-8s %-7s %-7s %-9s %-10s\n', ...
+        'Gen','Done[%]','Elapsed','BestJ/hr','CurJ/hr','SM[%]','Vs[m/s]', ...
         'L/D','b[m]','AR','Vp[L]','sigma');
-    fprintf('%s\n', repmat('-',1,105));
+    fprintf('%s\n', repmat('-',1,115));
 
     tStartOpt = tic;
 
@@ -121,6 +127,8 @@ function optOut = profitOptimization(optIn)
         [Jsorted, idx] = sort(Jvals, 'ascend');
         Xsorted = Xeval(:, idx);
         Ysorted = Y(:, idx);
+
+        J_cur_hr = infos{idx(1)}.J_hr;   % best of this generation (may be NaN if all failed)
 
         if Jsorted(1) < JBest
             JBest      = Jsorted(1);
@@ -154,8 +162,8 @@ function optOut = profitOptimization(optIn)
         if optIn.verbose > 0 && ...
            (mod(gen,optIn.verbose)==0 || gen==1 || gen==optIn.maxGen)
 
-            fprintf('%-6d %-8.1f%% %-10.2f %-10.3f %-8.2f %-8.2f %-8.2f %-7.3f %-7.2f %-9.2f %-10.3g\n', ...
-                gen, pctDone, elapsed_min, infoBest.J_hr, ...
+            fprintf('%-6d %-8.1f%% %-10.2f %-10.3f %-10.3f %-8.2f %-8.2f %-8.2f %-7.3f %-7.2f %-9.2f %-10.3g\n', ...
+                gen, pctDone, elapsed_min, infoBest.J_hr, J_cur_hr, ...
                 infoBest.SM_pct, infoBest.Vs_mps, infoBest.LD, ...
                 infoBest.b_m, infoBest.AR, infoBest.Vp_L, sigma);
         end
@@ -289,7 +297,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         wingOut_x             = wingGeometryDesign(wingIn_x);
 
         if wingOut_x.c_tip_m < ctx.c_tip_min_m; return; end
-        if wingOut_x.b_m > ctx.b_max_m;         return; end
+        if (wingOut_x.b_m + 2*cb_halfwidth_m) > ctx.b_max_m; return; end
         if cb_halfwidth_m >= wingOut_x.semiSpan_m; return; end
         
         % ---- Cargo bay volume constraint: Vp must fit in airfoil cross-section ----
@@ -345,6 +353,7 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
         vertOut_x                = verticalSurfaceDesign(vertIn_x);
 
         if vertOut_x.b_v_m > ctx.b_v_max_frac * wingOut_x.semiSpan_m; return; end
+        if vertOut_x.c_root_v_m > 1.2 * wingOut_x.c_tip_m; return; end  % winglet root chord ≤ 1.2× wing tip chord
 
         % ---- structural mass scaling ----
         m_wing_x   = ctx.m_wing_struct_ref_kg ...
@@ -442,6 +451,25 @@ function [Jobj, info] = profit_obj(x_norm, ctx)
             Jobj = 1e6 + 100*(Vs_x - ctx.Vs_max_mps)^2; return;
         end
         if V_cruise_x < ctx.Vs_margin_fac * Vs_x; return; end
+
+        % ---- Takeoff ground roll constraint ----
+        % s_g = 1.44*W^2 / (g*rho*S*CLmax*T_static) [Raymer simplified, no drag/friction]
+        s_g = 1.44 * Wg_actual^2 / (g_c * roh * wingOut_x.S_ref_m2 * CLmax_x * ctx.T_static_N);
+        if s_g > ctx.TOP_m; return; end
+
+        % ---- Climb T/W constraint ----
+        WS_act = Wg_actual / wingOut_x.S_ref_m2;
+        K_x    = 1 / (pi * 0.80 * AR_x);
+        q_cl   = 0.5 * roh * ctx.V_climb_mps^2;
+        T_cl   = interp1(ctx.T_vec_mps, ctx.T_vec_N, ctx.V_climb_mps, 'linear', 'extrap');
+        TW_req_cl = q_cl * aeroOut_x.CD0 / WS_act + K_x * WS_act / q_cl + ctx.G_climb;
+        if TW_req_cl > T_cl / Wg_actual; return; end
+
+        % ---- Turn T/W constraint ----
+        q_tn   = 0.5 * roh * ctx.V_turn_mps^2;
+        T_tn   = interp1(ctx.T_vec_mps, ctx.T_vec_N, ctx.V_turn_mps, 'linear', 'extrap');
+        TW_req_tn = q_tn * aeroOut_x.CD0 / WS_act + ctx.n_turn^2 * K_x * WS_act / q_tn;
+        if TW_req_tn > T_tn / Wg_actual; return; end
 
         % ---- AVL dynamic stability ----
         dynIn_x                  = ctx.dynIn_base;

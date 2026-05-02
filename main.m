@@ -1,4 +1,4 @@
-% 155B Group 2 Main Sizing Script
+%MAE-155B Group 2 Main Sizing Script
 
 % Intention:
 % Shared main sizing script for the group that can evolve with the
@@ -62,6 +62,9 @@
 
 clc; clear; close all;
 
+diary off;
+diary('outputs/main_output.txt');
+
 timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
 
@@ -70,10 +73,10 @@ repoRoot = fileparts(mfilename('fullpath'));
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = true;  % true = show all figures throughout the script
+showPlots       = false;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
-viewGeometry    = false;   % true = open AVL 3D viewer before stability run
+viewGeometry    = false;    % true = open AVL 3D viewer before stability run
 modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95)
                        %        (flat-plate model overestimates lift — keep false)
 
@@ -83,7 +86,7 @@ runCSopt        = false;  % true = CMA-ES elevon optimizer
 runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
-runProfitOpt    = false;   % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
+runProfitOpt    = false;    % true = CMA-ES full aircraft profit optimizer (~6-10 hr)
 %% ==================================================================
 
 if ~showPlots; set(0,'DefaultFigureVisible','off'); else; set(0,'DefaultFigureVisible','on'); end
@@ -101,7 +104,7 @@ LD = 11.15666;                   % [-] From AC polar
 reserve_factor = 1.15;     % [-] energy margin multiplier
 
 % -------- Baseline empty-weight fraction --------
-fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
+fe = 0.620;                 % [-] baseline empty-weight fraction — calibrated to physics Wg=2750g
 
 % -------- Payload / cargo volume definition --------
 % Vp is the ACTUAL required package / bay volume in physical units.
@@ -113,12 +116,12 @@ fe = 0.450;                 % [-] baseline empty-weight fraction = We / Wg
 %   Vp = 0.010 m^3  --> VPS = 10
 
 Vp_ref = 0.001;            % [m^3] reference package volume for penalty scaling
-Vp     = 0.01500000000000;            % [m^3] CMA-ES optimal (was 0.0039)
+Vp     = 0.03000000000000;            % [m^3] profit optimizer result (30 L)
 VPS    = Vp / Vp_ref;      % [-] nondimensional package-volume scalar
 
 % -------- Empty-weight penalty model for package volume --------
 ke =  fe / 12;               % [-] empty-weight-fraction penalty slope per unit VPS beyond reference
-fe_max = 0.60;             % [-] hard upper cap for sanity
+fe_max = 0.65;             % [-] hard upper cap — calibrated to allow Wg=2975g at 30L
 
 % (i) Aero:
 e     = 0.80;              % [-] Oswald efficiency factor
@@ -129,16 +132,16 @@ CLmax = 0.92863;               % [-] first-pass max lift coefficient
 delta_h = 120;             % [m] climb altitude change
 R_cruise = 18000;          % [m] cruise range
 Tf_measured = 61;          % [s] measured flight time
-V_cruise = 20.0;           % [m/s] CMA-ES optimal (was 24)
+V_cruise = 21.2;           % [m/s] profit optimizer result
 V_stall_mps = 12;   % [m/s] chosen Stall speed
 Wp_g = 800;               % [g] payload weight
 Wp = (Wp_g/1000)*g;        % [N] payload weight
 
 %% =================== CAD Design Variables ==================
 % (i) Wing Geometry Sliders:
-AR          = 8;         % [-] profit optimizer
-wingTapper  = 0.661;         % [-] profit optimizer
-wingSweep   = 28.3;          % [deg] profit optimizer
+AR          = 5.349;     % [-] profit optimizer
+wingTapper  = 0.641;     % [-] profit optimizer
+wingSweep   = 34.1;      % [deg] profit optimizer
 
 % (i) Fuselage / Centerbody Airfoil:
 fuselageAirfoil = 'mh95';    % ['mh95' | 'n0012' | other airfoil name in data/airfoils/]
@@ -151,14 +154,14 @@ fuselageAirfoil = 'mh95';    % ['mh95' | 'n0012' | other airfoil name in data/ai
 CD0_user = CD0;            % [-]
 
 % ---- body dimensions for centerbody / fuselage drag model ----
-Lf = 0.9500;                   % [m] body length — capped at 0.95 m (optimizer wanted 0.9926)
-Wf = 0.1491;                   % [m] max body width — profit optimizer (2 × cb_halfwidth = 2 × 0.0746)
+Lf = 1.0000;                   % [m] body length — profit optimizer
+Wf = 0.4000;                   % [m] max body width — profit optimizer (2 × cb_halfwidth = 2 × 0.2000)
 
 % ---- wetted areas (scaled from geometry; wing/fin overwritten after wingOut/vertOut) ----
 Swet_wing = 0.64897702;        % [m^2] placeholder — overwritten after wingGeometryDesign
 Swet_fuse = 0.21672003 * (Lf * Wf) / (0.620 * 0.290);  % [m^2] scales with fuselage box area
 Swet_fin  = 0.14780168;        % [m^2] placeholder — overwritten after verticalSurfaceDesign
-Hf = 0.10145110;               % [m] max body height
+Hf = 0.15861;                  % [m] max body height — MH95 at Lf=1.0m (15.86% thickness)
 
 % ---- wing / fin form-factor settings ----
 tc = 0.12;                 % [-] representative thickness-to-chord ratio
@@ -305,7 +308,7 @@ mission.n_turn            = 1.5;       % [-] working @ 1.2
 % -------- Climb / descent design choices --------
 mission.delta_h           = delta_h;   % [m] altitude gain
 
-mission.V_climb_mps       = 11.0;      % [m/s] forward climb speed
+mission.V_climb_mps       = 13.0;      % [m/s] forward climb speed — must exceed stall (~11.8 m/s)
 mission.gamma_climb_deg   = 6.0;       % [deg] UPDATED (was too aggressive)
 
 mission.V_descent_mps     = 30.0;      % [m/s]
@@ -372,7 +375,7 @@ sIn = struct();
 % Basic constants / current weight estimate
 sIn.rho_sl = roh;        % [kg/m^3]
 sIn.g      = g;          % [m/s^2]
-sIn.W0_N   = 2.251 * g;  % [N] mass-model result (fe-fraction overestimates at Vp=15L)
+sIn.W0_N   = 2.750 * g;  % [N] physics-based mass model result (2749.5 g actual)
 
 % Aero assumptions
 sIn.AR    = AR;          % [-]
@@ -388,7 +391,7 @@ sIn.V_climb_mps = mission.V_climb_mps;   % [m/s]
 sIn.G_climb     = mission.G_climb;       % [-]
 
 % Maneuver sizing
-sIn.V_turn_mps  = 11;     % [m/s]
+sIn.V_turn_mps  = 13;     % [m/s] — must exceed stall (~11.8 m/s)
 sIn.n_maneuver  = mission.n_turn;        % [-]
 
 % Takeoff sizing from mission geometry
@@ -441,7 +444,7 @@ T_avail_climb_N = sizingOut.T_avail_climb_N;
 T_avail_turn_N  = sizingOut.T_avail_turn_N;
 
 % Wing area from selected wing loading
-S_ref = 2.251 * g / WS_design;    % [m^2] — uses mass-model weight (fe-fraction overestimates)
+S_ref = 2.750 * g / WS_design;    % [m^2] — uses physics-based mass model weight
 
 fprintf('Selected wing area S_ref      = %.4f m^2\n', S_ref);
 fprintf('Selected wing loading         = %.2f N/m^2\n', WS_design);
@@ -533,8 +536,8 @@ wingIn.useSpecifiedSpan = false;
 % wingIn.b_m            = 1.80;  % only if useSpecifiedSpan = true
 
 % Reference placement
-wingIn.xLE_root_m = 0.0908; % profit optimizer
-wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
+wingIn.xLE_root_m = 0.1199; % profit optimizer
+wingIn.y_root_m   = 0.2000; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
@@ -731,7 +734,7 @@ twistIn.static_margin  = 0.05;
 
 % Distribution settings
 twistIn.model          = 'linear';
-twistIn.twist_root_deg = 0;  % profit optimizer
+twistIn.twist_root_deg = -2.33;  % profit optimizer
 twistIn.Nspan          = 200;
 
 % Run twist function
@@ -794,9 +797,9 @@ vertIn.x_c4_wing_ref_m = x_c4_MAC;
 % vertIn.S_v_m2 = 0.08 * S_ref;
 
 % ---------- User-selected shape ----------
-vertIn.AR_v           = 1.500; % delta winglet
-vertIn.taper_v        = 0.100; % delta winglet
-vertIn.sweep_c4_v_deg = 65.0;  % delta winglet
+vertIn.AR_v           = 2.347; % profit optimizer
+vertIn.taper_v        = 0.361; % profit optimizer
+vertIn.sweep_c4_v_deg = 41.5;  % profit optimizer
 
 vertIn.cant_deg = 0.0;
 vertIn.toe_deg  = 0.0;
@@ -844,6 +847,8 @@ fprintf('Top area fraction             = %.3f\n', vertOut.topFrac);
 fprintf('Single-fin span/height        = %.4f m\n', vertOut.b_v_m);
 fprintf('Single-fin root chord         = %.4f m\n', vertOut.c_root_v_m);
 fprintf('Single-fin tip chord          = %.4f m\n', vertOut.c_tip_v_m);
+fprintf('Wing tip chord                = %.4f m\n', c_tip);
+fprintf('Winglet/tip chord ratio       = %.3f  (limit ≤ 1.2)\n', vertOut.c_root_v_m / c_tip);
 fprintf('Single-fin MAC                = %.4f m\n', vertOut.MAC_v_m);
 
 if strcmpi(vertOut.sizeMode,'tailVolumeCoeff')
@@ -1042,7 +1047,7 @@ comp(end+1) = makePointMass('P1 Main Prop',  0.012, [0.000,  0.000,  0.000]);
 comp(end+1) = makePointMass('ESC1 Main ESC', 0.051, [0.06,  0.000,  0.000]);
 
 % ---- Battery / avionics ---- % MOVE THE BATTERY FOR BEST RESULTS!
-comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.05, 0.000, -0.01750000/2]);
+comp(end+1) = makePointMass('B1 Main Battery', 0.15, [0.551, 0.000, -0.01750000/2]);
 comp(end+1) = makePointMass('R1 Receiver',     0.015, [0.1, 0.000, 0.000]);
 
 % ---- Payload ----
@@ -1601,7 +1606,7 @@ fprintf('\n================ SM CORRECTION ADVISOR =================\n');
 SM_target    = 7.5;   % [%] midpoint of 5-10% target band
 xNP_curr     = massOut.cg_m(1) + dynOut.SM_pct/100 * wingOut.MAC_m;
 m_batt_kg    = 0.161;
-x_batt_curr  = 0.553;
+x_batt_curr  = 0.551;
 m_no_batt_kg = massOut.mass_kg - m_batt_kg;
 x_cg_no_batt = (massOut.mass_kg*massOut.cg_m(1) - m_batt_kg*x_batt_curr) / m_no_batt_kg;
 x_cg_target  = xNP_curr - SM_target/100 * wingOut.MAC_m;
@@ -2232,21 +2237,30 @@ if runProfitOpt
     optIn.de_trim_max_deg = 15.0;   % [deg] max trim elevon deflection
     optIn.Vs_margin_fac   = 1.30;   % [-]   V_cruise / Vs minimum ratio
     optIn.Wg_max_N        = 60.0;   % [N]   gross weight hard cap
+    optIn.T_static_N      = propOut.T_static_N;          % [N]   static thrust from APC surrogate
+    optIn.TOP_m           = mission.runwayLength_m;       % [m]   max allowable takeoff ground roll
+    optIn.T_vec_mps       = propOut.V_vec_mps;           % [m/s] thrust curve from APC surrogate
+    optIn.T_vec_N         = propOut.T_vec_N;             % [N]   thrust curve from APC surrogate
+    optIn.V_climb_mps     = mission.V_climb_mps;         % [m/s] climb speed constraint
+    optIn.G_climb         = mission.G_climb;             % [-]   climb gradient
+    optIn.n_turn          = mission.n_turn;              % [-]   turn load factor
+    optIn.V_turn_mps      = 13.0;                        % [m/s] turn speed (above stall limit)
 
-    % ---- initial guess: current design values ----
-    optIn.x0 = [AR; wingTapper; wingSweep; twistOut.twist_root_deg; WS_design; ...
-                wingIn.xLE_root_m; vertIn.AR_v; vertIn.taper_v; vertIn.sweep_c4_v_deg; ...
-                V_cruise; Vp; wingIn.y_root_m; Lf];
+    % ---- initial guess: seed from previous best result ----
+    optIn.x0 = [5.349; 0.641; 34.1; -2.33; 86.6; 0.1199; ...
+                2.347; 0.361; 41.5; 21.2; 0.0300; 0.1998; 1.0000];
 
     % ---- CMA-ES settings ----
     % lambda=0 uses 2x Hansen default (≈26 for n=13).
     % For shorter test runs, reduce maxGen (e.g. 50 for a ~20-min smoke test).
-    optIn.sigma0   = 0.15;   % initial step in normalized [0,1] space
-    optIn.maxGen   = 200;    % increase to 500 for thorough run
+    optIn.sigma0   = 0.10;   % tighter step — seeding from known good point
+    optIn.maxGen   = 500;    % increase to 500 for thorough run
     optIn.lambda   = 0;      % 2× Hansen default ≈ 22 for n=11
-    optIn.verbose  = 10;
+    optIn.verbose  = 1;
     optIn.debugObj = false;
 
+    delete(gcp('nocreate'));  % kill parfor pool so workers reload updated functions from disk
+    clear functions
     optProfOut = profitOptimization(optIn);
 
     % Save result to outputs/ for later reference
