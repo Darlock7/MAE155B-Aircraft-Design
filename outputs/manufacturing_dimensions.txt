@@ -1,6 +1,6 @@
 =================================================================
   MAE 155B Group 2 — Manufacturing Dimension Sheet
-  Generated: 2026-05-04 09:22:18
+  Generated: 2026-05-04 14:55:19
 =================================================================
 
 --- WING PLANFORM ---
@@ -72,9 +72,3 @@
   Rudder HM (one fin)  = 0.0102 N*m  OK  (6% of capacity)
 
 --- STRUCTURE ---
-  Spar diameter (selected)    = 10 mm
-  Required spar diameter      = 8.01 mm
-  Bending factor of safety    = 3.89
-  Max wing deflection         = 57.5 mm  (3.7% span)
-
-=================================================================

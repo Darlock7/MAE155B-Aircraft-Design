@@ -1825,103 +1825,94 @@ end
 
 fprintf('================================================\n\n');
 %% ============= STRUCTURE SIZING (FINAL) ==============
-fprintf('\n================ STRUCTURE SIZING (FOAM + 2 SPARS) =================\n');
+fprintf('\n================ STRUCTURE SIZING (FINAL - METERS) =================\n');
 
-% ================== MATERIAL PROPERTIES ==================
+%% ================== MATERIAL PROPERTIES ==================
+CF.E = 70e9;            % [Pa]
+CF.sigma_allow = 200e6; % [Pa]
+CF.rho = 1600;          % [kg/m^3]
 
-% Carbon Fiber (spar)
-CF.E = 70e9;            
-CF.sigma_allow = 200e6; 
-CF.rho = 1600;          
-
-% Foam (entire airfoil)
 Foam.E = 50e6;          
-Foam.rho = 30;          
+Foam.rho = 30;
 
 SF = 2.0;
 g = 9.81;
 
-fprintf('\n--- MATERIALS ---\n');
-fprintf('Carbon Fiber: E = %.1f GPa, rho = %d kg/m^3\n', CF.E/1e9, CF.rho);
-fprintf('Foam:         E = %.2f MPa, rho = %d kg/m^3\n', Foam.E/1e6, Foam.rho);
+%% ================== GEOMETRY ==================
+b = wingOut.b_m;            % [m] span (your actual value ~1.331 m)
+c_root = wingOut.c_root_m;  % [m]
+c_tip  = wingOut.c_tip_m;   % [m]
 
-% ================== GEOMETRY ==================
-b = wingOut.b_m;        
-c_root = wingOut.c_root_m;
-c_tip  = wingOut.c_tip_m;
+fprintf('Span = %.4f m\n', b);
 
-fprintf('\nSpan = %.3f m\n', b);
-
-% ================== WEIGHT ==================
+%% ================== WEIGHT ==================
 if exist('Wg','var')
-    W = Wg;
+    W = Wg;                 % [N]
 else
-    W = 2.045 * g; % fallback
+    W = 2.045 * g;          % fallback
 end
 
 fprintf('Weight = %.2f N\n', W);
 
-% ================== LOAD ==================
-M_max = W * b / 8;
+%% ================== LOAD ==================
+M_max = W * b / 8;          % [Nm]
+fprintf('Max bending moment = %.4f Nm\n', M_max);
 
-fprintf('Max bending moment = %.3f Nm\n', M_max);
+%% ================== AIRFOIL THICKNESS ==================
+tc = 0.12;                  % thickness ratio
+t = tc * c_root;            % [m]
 
-% ================== TWO-SPAR DESIGN ==================
-fprintf('\n--- TWO SPAR DESIGN ---\n');
+%% ================== SPAR LOCATIONS ==================
+x_spar = 0.25 * c_root;     % [m]
 
-% Assume equal load sharing
-M_each = M_max / 2;
+y_top = +0.4 * t;           % [m]
+y_bottom = -0.4 * t;        % [m]
 
-% Required diameter for each spar
-d_req = ((32 * M_each * SF) / (pi * CF.sigma_allow))^(1/3);
+h = y_top - y_bottom;       % [m]
 
-% Practical selection
-d_selected = 0.008;   % 8 mm carbon rods (realistic for 2-spar system)
+fprintf('\n--- SPAR LOCATIONS ---\n');
+fprintf('Chordwise location = %.5f m\n', x_spar);
+fprintf('Top spar height    = %.5f m\n', y_top);
+fprintf('Bottom spar height = %.5f m\n', y_bottom);
+fprintf('Vertical spacing   = %.5f m\n', h);
 
-I_single = (pi/64) * d_selected^4;
-I_total = 2 * I_single;
+%% ================== SPAR DESIGN ==================
+d = 0.008;                  % [m] 8 mm carbon rods
 
-y = d_selected / 2;
+A = pi*(d/2)^2;
+I_single = (pi/64)*d^4;
 
-sigma_actual = M_each * y / I_single;
-FoS = CF.sigma_allow / sigma_actual;
+I_total = 2*I_single + 2*A*(h/2)^2;
 
-fprintf('Required diameter per spar = %.2f mm\n', d_req*1000);
-fprintf('Selected diameter per spar = %.2f mm\n', d_selected*1000);
-fprintf('FoS per spar = %.2f\n', FoS);
+y_max = h/2;
 
-% ================== DEFLECTION ==================
-delta_max = (W * b^3) / (48 * CF.E * I_total);
+sigma = M_max * y_max / I_total;
+FoS = CF.sigma_allow / sigma;
+
+fprintf('\n--- STRESS ---\n');
+fprintf('Max stress = %.4f MPa\n', sigma/1e6);
+fprintf('Factor of Safety = %.2f\n', FoS);
+
+%% ================== DEFLECTION ==================
+delta = (W * b^3) / (48 * CF.E * I_total);
 
 fprintf('\n--- DEFLECTION ---\n');
-fprintf('Max deflection = %.4f m\n', delta_max);
+fprintf('Max deflection = %.5f m\n', delta);
 
-if delta_max < 0.05*b
+if delta < 0.05*b
     fprintf('✔ DEFLECTION OK\n');
 else
     fprintf('❌ DEFLECTION TOO HIGH\n');
 end
 
-% ================== SPAR LOCATION ==================
-fprintf('\n--- SPAR PLACEMENT ---\n');
-
-front_spar = 0.25;  % 25% chord
-rear_spar  = 0.60;  % 60% chord
-
-fprintf('Front spar location = %.0f%% chord\n', front_spar*100);
-fprintf('Rear spar location  = %.0f%% chord\n', rear_spar*100);
-
-% ================== SHEAR ==================
+%% ================== SHEAR ==================
 V_max = W / 2;
-
-A_shear = 2 * pi*(d_selected/2)^2;
-
-tau = V_max / A_shear;
+tau = V_max / (2*A);
 
 fprintf('\n--- SHEAR ---\n');
-fprintf('Shear stress = %.2f MPa\n', tau/1e6);
+fprintf('Shear stress = %.4f MPa\n', tau/1e6);
 
-% ================== LANDING LOAD ==================
+%% ================== LANDING LOAD ==================
 h_drop = 0.3;
 
 V_impact = sqrt(2*g*h_drop);
@@ -1930,44 +1921,39 @@ F_impact = (W/g) * V_impact / 0.1;
 fprintf('\n--- LANDING ---\n');
 fprintf('Impact force = %.2f N\n', F_impact);
 
-% ================== MASS ==================
-spar_volume = 2 * pi*(d_selected/2)^2 * b;
-spar_mass = spar_volume * CF.rho;
+%% ================== MASS ==================
+spar_vol = 2 * A * b;
+spar_mass = spar_vol * CF.rho;
 
-% Foam volume (approx trapezoidal wing)
 S = (c_root + c_tip)/2 * b;
-t_avg = 0.12 * c_root;   % assume 12% thickness airfoil
+t_avg = 0.12 * c_root;
 
-foam_volume = S * t_avg;
-foam_mass = foam_volume * Foam.rho;
+foam_vol = S * t_avg;
+foam_mass = foam_vol * Foam.rho;
 
 fprintf('\n--- MASS ---\n');
-fprintf('Spar mass = %.3f kg\n', spar_mass);
-fprintf('Foam mass = %.3f kg\n', foam_mass);
+fprintf('Spar mass = %.5f kg\n', spar_mass);
+fprintf('Foam mass = %.5f kg\n', foam_mass);
 
-% ================== MATERIAL ASSIGNMENT ==================
-fprintf('\n================ MATERIAL ASSIGNMENT =================\n');
-
-fprintf('Primary Load Structure : Carbon Fiber (2 spars)\n');
-fprintf('Airfoil Structure      : Foam Core\n');
-fprintf('No ribs or stringers used\n');
+%% ================== MATERIAL ASSIGNMENT ==================
+fprintf('\n--- MATERIAL ASSIGNMENT ---\n');
+fprintf('Top Spar     : Carbon Fiber\n');
+fprintf('Bottom Spar  : Carbon Fiber\n');
+fprintf('Wing Body    : Foam\n');
 
 fprintf('\n--- JUSTIFICATION ---\n');
-fprintf('Carbon Fiber spars carry bending loads\n');
-fprintf('Foam maintains aerodynamic shape and reduces weight\n');
-fprintf('Two spars improve stiffness and load distribution\n');
+fprintf('Vertical spar separation increases bending stiffness\n');
+fprintf('Carbon fiber carries structural loads\n');
+fprintf('Foam provides aerodynamic shape with minimal weight\n');
 
-fprintf('\n=====================================================\n');
-
-% ================== FINAL ==================
-if FoS > SF && delta_max < 0.05*b
+%% ================== FINAL ==================
+if FoS > SF && delta < 0.05*b
     fprintf('\n✅ FINAL STRUCTURE SAFE\n');
 else
     fprintf('\n❌ STRUCTURE NEEDS IMPROVEMENT\n');
 end
 
 fprintf('=====================================================\n\n');
-
 %% =============== Profit Re-evaluation with Actual Physics ==============
 fprintf('\n================ PROFIT RE-EVALUATION (Actual Physics) =================\n');
 
