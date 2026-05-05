@@ -1,0 +1,579 @@
+================================================================================
+  MAE 155B AIRCRAFT DESIGN — CODE ARCHITECTURE GUIDE
+  Team: Harshil Patel, John Sigafoos, Angel Ochoa, Juan Sanchez,
+        Sara Chowdhury, Analisa Veloz
+  Last updated: May 2026
+================================================================================
+
+This document explains how the codebase is organized, what each file does,
+and how data flows from one function to the next. It is written for teammates
+who understand the aerodynamics and physics but are less familiar with the
+MATLAB code structure.
+
+--------------------------------------------------------------------------------
+  QUICK START — HOW TO RUN THE CODE
+--------------------------------------------------------------------------------
+
+1. Open MATLAB and set the working directory to the repo root:
+      MAE155B-Aircraft-Design/
+
+2. Run:  main.m
+
+   That is the only file you ever need to run manually. It calls everything else.
+
+3. At the top of main.m there are RUN FLAGS (around line 74). These toggle
+   optional subsections:
+
+      showPlots      = true/false   — enable/disable all plots
+      viewGeometry   = true/false   — open AVL 3D geometry viewer
+      runOptimizer   = true/false   — run CMA-ES profit optimizer (6–10 hrs)
+      runMonteCarlo  = true/false   — run Monte Carlo sensitivity analysis
+      runSweep       = true/false   — run dynamic stability parameter sweep
+      runCSopt       = true/false   — run control surface optimizer
+
+   For a quick check run, set all flags to false except showPlots.
+
+--------------------------------------------------------------------------------
+  DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+
+MAE155B-Aircraft-Design/
+│
+├── main.m                        ← PRIMARY ENTRY POINT. Run this.
+├── run_project.m                 ← Adds all src/ folders to MATLAB path
+│
+├── src/                          ← All analysis functions
+│   ├── aerodynamics/             ← Airfoil and aircraft aero
+│   ├── geometry/                 ← Wing, fin, fuselage geometry
+│   ├── Stability/                ← Static and dynamic stability
+│   ├── propulsion/               ← Motor and propeller models
+│   ├── energy/                   ← Energy and battery sizing
+│   ├── mission/                  ← Flight performance and trajectories
+│   └── economics/                ← Profit scoring and optimization
+│
+├── plotting/                     ← Visualization functions
+│
+├── data/
+│   ├── airfoils/                 ← Airfoil coordinate files (.dat, XFOIL format)
+│   ├── models/                   ← Precomputed surrogate databases (.mat)
+│   ├── propellers/               ← APC propeller performance tables (.txt)
+│   └── reference/                ← CAD parameters and benchmark polars
+│
+├── AVL/
+│   └── Nimbus/                   ← AVL executable + generated geometry files
+│       ├── avl352               ← AVL binary (macOS)
+│       ├── avl.exe              ← AVL binary (Windows)
+│       ├── fw_dyn.avl           ← Flying-wing geometry (auto-generated)
+│       ├── fw_dyn.mass          ← CG / inertia input (auto-generated)
+│       └── fw_dyn_st.txt        ← Stability output parsed by MATLAB
+│
+└── outputs/                      ← Generated results (gitignored on some branches)
+    ├── main_output.txt
+    ├── manufacturing_dimensions.txt
+    └── profit_opt_result.mat
+
+--------------------------------------------------------------------------------
+  HOW main.m IS ORGANIZED — EXECUTION ORDER
+--------------------------------------------------------------------------------
+
+main.m runs top-to-bottom. Here is every major section in order:
+
+  SECTION 1  — Physical constants (g, rho, mu)
+  SECTION 2  — User inputs: efficiency, L/D assumption, payload weight/volume,
+                mission parameters (range, altitude, cruise speed)
+  SECTION 3  — CAD design variables: AR, taper, sweep, fuselage airfoil choice
+  SECTION 4  — Drag build-up inputs: fuselage dimensions, wetted areas
+  SECTION 5  — Package volume penalty on fe (empty weight fraction)
+  SECTION 6  — Derive gross weight Wg and empty weight We from fe and payload
+  SECTION 7  — Cargo bay geometry (how big a box fits inside the fuselage airfoil)
+  SECTION 8  — Mission energy calculation (climb + cruise + reserve)
+  SECTION 9  — Competition profit score J(x) — first-pass using assumed L/D
+  SECTION 10 — Mission profile (lap geometry, runway, climb/descent distances)
+  SECTION 11 — Propulsion analysis (thrust curve from motor KV + APC propeller)
+  SECTION 12 — CTOL preliminary sizing (wing loading vs. thrust-to-weight diagram)
+  SECTION 13 — Monte Carlo sensitivity analysis (optional)
+  SECTION 14 — Design lift coefficient at cruise
+  SECTION 15 — Wing geometry (span, root/tip chord, MAC, control surface coords)
+  SECTION 16 — Airfoil analysis (load surrogate database, evaluate at cruise Re)
+  SECTION 17 — Airfoil polar plots
+  SECTION 18 — Twist function (Panknin method for required washout)
+  SECTION 19 — Vertical stabilizer / winglet geometry
+  SECTION 20 — Spanwise aerodynamic estimate (lift distribution)
+  SECTION 21 — Aircraft drag polar (CD0 build-up, CL vs alpha, L/D)
+  SECTION 22 — Aircraft mass properties (CG, inertia tensor from all components)
+  SECTION 23 — Unloaded (no payload) CG and mass
+  SECTION 24 — CG position as % MAC
+  SECTION 25 — Updated performance state (actual stall speed, cruise speed)
+  SECTION 26 — Static stability analysis (neutral point, static margin %)
+  SECTION 27 — 3D geometry plot
+  SECTION 28 — V-n diagram (maneuver envelope)
+  SECTION 29 — Gust load overlay
+  SECTION 30 — Dynamic stability via AVL (eigenvalues, short period, phugoid,
+                Dutch roll, roll subsidence, spiral mode)
+  SECTION 31 — SM correction advisor (where to move the battery for target SM)
+  SECTION 32 — Control surface sizing (trim deflection, max load factor, turn radius)
+  SECTION 33 — Control surface optimizer (optional)
+  SECTION 34 — Dynamic stability sweep (optional)
+  SECTION 35 — CMA-ES profit optimizer (optional, 6–10 hrs)
+  SECTION 36 — Structure sizing
+  SECTION 37 — Profit re-evaluation with actual physics (final sanity check)
+
+--------------------------------------------------------------------------------
+  WHAT EACH SOURCE FILE DOES
+--------------------------------------------------------------------------------
+
+---- AERODYNAMICS (src/aerodynamics/) ----
+
+  aeroPolarAircraft.m
+    Input:  wing geometry (AR, Sref, MAC, sweep), airfoil data (Cla, alphaL0,
+            Clmax, Cm0 for root and tip), drag build-up inputs
+    Output: aircraft CL(alpha), CD(alpha), L/D(alpha), cruise CL/CD/L-D,
+            stall alpha, CDo breakdown (wing/body/fin)
+    What it does: Builds the whole-aircraft drag polar using the parabolic
+    model CD = CD0 + CL²/(pi*e*AR). CD0 is computed from a Raymer-style
+    skin-friction and form-factor drag build-up.
+
+  loadAirfoilSurrogateDB.m
+    Input:  repoRoot (path to repo)
+    Output: airfoilDB struct
+    What it does: Loads data/models/airfoilDB.mat into MATLAB. This .mat file
+    contains precomputed XFOIL results for all airfoils at many Reynolds numbers.
+
+  evaluateAirfoilSurrogate.m
+    Input:  airfoilDB, airfoil name (e.g. 'e222.dat'), Reynolds number
+    Output: Cla, alphaL0, Cm0, Clmax, best L/D interpolated at that Re
+    What it does: Interpolates from the precomputed database so we do not need
+    to run XFOIL at runtime (which is slow and can fail).
+
+  buildAirfoilSurrogates.m
+    What it does: Offline tool — runs XFOIL on every airfoil in data/airfoils/
+    across a grid of Reynolds numbers and saves airfoilDB.mat. Only needs to
+    be re-run if you add a new airfoil.
+
+  twistFunctionPanknin.m
+    Input:  b, AR, c_root, c_tip, sweep, alphaL0 root/tip, Cm0 root/tip,
+            CL_design, twist_root_deg (user-set washout at root)
+    Output: full spanwise twist distribution, geometric and aerodynamic twist
+    What it does: Uses the Panknin method (from class slides) to compute how
+    much twist the wing needs across the span to satisfy the pitching moment
+    and lift requirements. The optimizer controls twist_root_deg; this function
+    computes the required tip twist.
+
+  spanwiseAeroEstimate.m
+    Input:  wing geometry + twist distribution + airfoil properties
+    Output: spanwise section CL, local lift, root/tip effective alpha
+    What it does: Piecewise estimate of how lift is distributed along the span.
+
+---- GEOMETRY (src/geometry/) ----
+
+  wingGeometryDesign.m
+    Input:  S_ref [m²], AR, taper ratio, sweep_c4 [deg], xLE_root, y_root
+    Output: b, c_root, c_tip, MAC, xLE_tip, xLE_MAC, x_c4_MAC, semiSpan,
+            control surface geometry (span stations, area)
+    What it does: From the four main planform parameters, computes every chord,
+    position, and sweep angle you need. This is the source of truth for all
+    geometric quantities used downstream.
+
+  verticalSurfaceDesign.m
+    Input:  AR_v, taper_v, sweep_c4_v, tail volume coefficient c_v,
+            wing reference geometry (for moment arm)
+    Output: S_v, b_v, c_root_v, c_tip_v, MAC_v, all LE/TE positions,
+            rudder geometry
+    What it does: Sizes the winglet/vertical stabilizer using a tail volume
+    coefficient approach, then computes the full trapezoidal fin geometry.
+
+  cargoBayGeometry.m
+    Input:  Lf (fuselage length), Wf (fuselage width), airfoil file
+    Output: maximum rectangle width and height that fits inside the airfoil
+            cross-section, cargo bay volume [m³]
+    What it does: Finds the largest rectangular box that fits inside the
+    fuselage airfoil shape. Volume = cross-section area × spanwise depth (Wf).
+
+---- STABILITY (src/Stability/) ----
+
+  dynamicStabilityAVL.m
+    Input:  mass, inertia tensor, CG, wing geometry, fin geometry, aero data,
+            cruise conditions
+    Output: full eigenvalue set, mode damping ratios and frequencies,
+            handling quality level (MIL-STD), control derivatives
+    What it does: This is the most complex function. It:
+      1. Writes the AVL geometry file (.avl) from MATLAB inputs
+      2. Writes the mass/inertia file (.mass)
+      3. Runs the AVL binary (avl352 on Mac, avl.exe on Windows) via system()
+      4. Parses AVL's stability derivative output (CL_alpha, Cm_alpha, Cm_q, etc.)
+      5. Performs eigenanalysis to find the 4 longitudinal and 4 lateral modes
+      6. Classifies modes: Short Period, Phugoid, Dutch Roll, Roll Subsidence, Spiral
+      7. Rates handling qualities per MIL-STD-1797 (Level 1/2/3)
+
+  aircraftMassProperties.m
+    Input:  cadBodies (CAD-derived mass components), pointMasses (discrete items:
+            motor, battery, receiver, payload, servos, etc.)
+    Output: total mass, CG [x,y,z], full 3×3 inertia tensor about CG
+    What it does: Combines all mass contributions and applies the parallel-axis
+    theorem to compute the inertia tensor about the aircraft CG.
+
+  staticStabilityAnalysis.m
+    Input:  CG position, neutral point, MAC, xLE_MAC
+    Output: static margin [%], stability band check, CG shift with/without payload
+    What it does: Computes SM = (x_NP - x_CG) / MAC. The neutral point in this
+    function comes from the simplified assumption x_NP = x_c4_MAC (25% MAC).
+    Note: AVL gives a more accurate neutral point — trust AVL's SM over this one.
+
+  makePointMass.m
+    Input:  name (string), mass [kg], position [x, y, z] [m]
+    Output: struct with those fields
+    What it does: Simple helper to create a component entry for mass properties.
+    Used throughout main.m to define motor, battery, payload, servos, etc.
+
+  controlSurfaceSizing.m
+    Input:  AVL control derivatives (Cmde, Clda, Cnda, Clp), cruise conditions,
+            wing geometry, mass
+    Output: trim elevon deflection, max load factor, min turn radius, roll rate,
+            hinge moments for servo sizing
+    What it does: Converts AVL's dimensionless derivatives into real performance
+    numbers — how many degrees the elevon must deflect to trim, how fast it rolls.
+
+---- PROPULSION (src/propulsion/) ----
+
+  propulsionAnalysis.m
+    Input:  motor KV [RPM/V], Rm [ohm], I0 [A], battery voltage,
+            propeller name (e.g. '10x4.5MR'), speed vector V_vec
+    Output: thrust curve T(V), power curve P(V), static thrust T_static,
+            static current
+    What it does: Uses the APC propeller data tables in data/propellers/ plus
+    the motor electrical model (back-EMF) to compute how much thrust the
+    motor/prop combination produces at any flight speed.
+
+---- ENERGY (src/energy/) ----
+
+  energyCalc.m
+    Input:  Wg [N], eta_p (propulsion efficiency), LD (lift-to-drag),
+            delta_h [m] (climb altitude), R_cruise [m], reserve_factor
+    Output: E_climb, E_cruise, E_f (total mission energy), E_design (with reserve)
+    What it does: Simple physics energy calculation.
+      E_climb  = Wg * delta_h / eta_p
+      E_cruise = (Wg / LD) * R_cruise / eta_p
+    These are used directly in the profit function.
+
+---- MISSION (src/mission/) ----
+
+  missionProfileCigar.m
+    Input:  runway length, pattern dimensions, cruise speed, climb/descent angles
+    Output: lap length, flight times for each phase, liftoff/touchdown positions
+    What it does: Models the "cigar-shaped" competition course (two straights
+    connected by 180° turns) and computes total mission geometry.
+
+  solveCruiseSpeed.m
+    Input:  rho, weight, Sref, drag polar, thrust curve
+    Output: actual cruise speed where T_available = D
+    What it does: Finds the speed where the propeller thrust equals the aircraft
+    drag. This is the actual cruise speed, which may differ from the design speed.
+
+  updatePerformanceState.m
+    Input:  all aerodynamic and propulsion data
+    Output: actual stall speed, takeoff speed, cruise speed, max climb rate
+    What it does: Given the fully-computed aircraft (not the simplified early
+    estimate), re-derives all performance numbers for a final sanity check.
+
+---- ECONOMICS (src/economics/) ----
+
+  profitPerUnitTime.m
+    Input:  Wp [N] (payload weight), Vp [m³] (payload volume),
+            Ef [J] (total energy × 20 flights), Wg [N], Tf [s] (time × 20 flights)
+    Output: J [$/s] — competition profit score
+    What it does: Implements the MAE155B competition scoring function exactly.
+    This is the number you want to maximize. J increases with heavier payload,
+    more payload volume, and lighter/more efficient aircraft.
+
+  profitOptimization.m
+    Input:  optIn struct with all mission/physics context + bounds + settings
+    Output: optimal design vector (13 variables), best J achieved, convergence history
+    What it does: Runs CMA-ES (Covariance Matrix Adaptation Evolution Strategy),
+    a gradient-free global optimizer, to find the combination of AR, taper, sweep,
+    twist, wing loading, fuselage size, fin shape, and cruise speed that maximizes J.
+    Each candidate design calls wingGeometryDesign → airfoil surrogate → twist →
+    vertical surface → mass model → drag polar → AVL stability → profit score.
+    Constraints enforced: stall speed ≤ 12 m/s, static margin 5–13%,
+    takeoff ground roll ≤ 138 m, climb T/W feasible, turn T/W feasible,
+    winglet chord ≤ 1.2× wing tip chord, wingspan ≤ 2.5 m.
+    Runtime: 6–10 hours on a fast machine with parallel workers.
+
+  monteCarloProfitSensitivity.m
+    Input:  baseline design + uncertainty ranges for each variable
+    Output: distribution of J, sensitivity to each parameter
+    What it does: Randomly perturbs design variables within tolerances and
+    computes J for each sample. Shows which parameters most affect profit.
+
+---- PLOTTING (plotting/) ----
+
+  plotAircraftGeometry3D.m
+    What it does: Draws the full 3D aircraft — wing, fins, fuselage, CG markers
+    (loaded and unloaded), and component point masses. Most useful visual check.
+
+  preliminarySizingCTOL.m
+    What it does: Draws the T/W vs W/S carpet plot showing stall, climb, turn,
+    and takeoff constraint lines. The design point sits where all constraints
+    are satisfied with minimum T/W.
+
+  plotVNDiagram.m
+    What it does: Draws the velocity-load factor (V-n) diagram showing the
+    maneuver envelope, stall boundary, and gust load curves.
+
+--------------------------------------------------------------------------------
+  DATA FLOW SUMMARY
+--------------------------------------------------------------------------------
+
+This shows what each function needs from others:
+
+  Inputs (user)
+       |
+       v
+  wingGeometryDesign  ──────────────────────────────────────────────────────┐
+       |  b, c_root, c_tip, MAC, xLE positions                              |
+       v                                                                     |
+  evaluateAirfoilSurrogate (uses airfoilDB.mat at cruise Re)               |
+       |  Cla, alphaL0, Cm0, Clmax for root and tip                        |
+       v                                                                     |
+  twistFunctionPanknin                                                      |
+       |  spanwise twist distribution                                        |
+       v                                                                     |
+  aeroPolarAircraft                                                         |
+       |  CL(alpha), CD(alpha), L/D, cruise CL/CD, CD0 breakdown           |
+       v                                                                     |
+  energyCalc(Wg, L/D, ...)     propulsionAnalysis(motor, prop, ...)        |
+       |  E_climb, E_cruise             |  T(V) thrust curve                |
+       v                               v                                    |
+  profitPerUnitTime(Wp, Vp, Ef, Wg, Tf)                                    |
+       |  J [$/hr]                                                           |
+       v                                                                     |
+  (optimization target)                                                     |
+                                                                            |
+  aircraftMassProperties(all components)  ◄──── verticalSurfaceDesign ◄───┘
+       |  total mass, CG, inertia tensor
+       v
+  dynamicStabilityAVL(geometry + mass + aero)
+       |  eigenvalues, damping, frequencies, SM from AVL
+       v
+  controlSurfaceSizing(AVL derivatives + geometry)
+       |  trim deflection, max load factor, servo hinge moments
+       v
+  updatePerformanceState(aero + propulsion + mass)
+       |  actual stall speed, actual cruise speed, climb rate
+       v
+  [Final output to screen + plots]
+
+--------------------------------------------------------------------------------
+  THE OPTIMIZATION LOOP (profitOptimization.m)
+--------------------------------------------------------------------------------
+
+Every time the optimizer evaluates one candidate design, it runs this
+internal mini-pipeline:
+
+  1. Decode 13 design variables from normalized [0,1] space to physical units
+  2. Estimate gross weight from empty-weight fraction model
+  3. wingGeometryDesign  → planform
+  4. Evaluate airfoil surrogates at cruise Re for root and tip
+  5. twistFunctionPanknin → required washout
+  6. verticalSurfaceDesign → fin geometry
+  7. Check geometric feasibility (tip chord, wingspan, fin height, fin chord)
+  8. Scale structural masses
+  9. aircraftMassProperties → CG + inertia
+  10. aeroPolarAircraft → L/D and CD0
+  11. Check stall speed ≤ 12 m/s
+  12. Check takeoff ground roll ≤ 138 m
+  13. Check climb T/W feasible at V_climb = 13 m/s
+  14. Check turn T/W feasible at V_turn = 13 m/s
+  15. dynamicStabilityAVL → static margin
+  16. Check SM in [5%, 13%] band
+  17. energyCalc + profitPerUnitTime → J
+  18. Apply soft penalties for poor dynamic stability modes
+  19. Return -J as the objective (CMA-ES minimizes, we maximize J)
+
+  If any hard constraint (steps 7–16) is violated, the design is rejected
+  immediately (returns 1e6) without computing J. This saves time.
+
+  With lambda ≈ 26 candidates per generation and 500 generations,
+  the optimizer evaluates ~13,000 designs. Each design takes ~2 s
+  (dominated by AVL). Total runtime: 6–10 hours with parfor.
+
+--------------------------------------------------------------------------------
+  AVL INTEGRATION
+--------------------------------------------------------------------------------
+
+AVL (Athena Vortex Lattice) is an external program by Mark Drela (MIT).
+It computes aerodynamic stability derivatives using a vortex-lattice method,
+which is significantly more accurate than our simplified analytical formulas.
+
+How MATLAB uses AVL:
+
+  1. dynamicStabilityAVL.m writes three files based on the current design:
+       AVL/Nimbus/fw_dyn.avl    ← geometry: wing panels, fin panels, control deflections
+       AVL/Nimbus/fw_dyn.mass   ← mass, CG location, inertia tensor
+       AVL/Nimbus/fw_dyn.run    ← operating condition: V, rho, alpha_trim
+
+  2. MATLAB calls:   system('./avl352 < fw_dyn_cmd.txt > fw_dyn_st.txt')
+     This runs AVL, feeds it commands via the .txt file, and captures output.
+
+  3. MATLAB reads fw_dyn_st.txt and parses numbers using regular expressions:
+       CLa, Cma (lift and pitch moment slopes)
+       Cmq      (pitch damping)
+       CYb, Clb, Cnb (lateral-directional derivatives)
+       Eigenvalues (complex pairs for longitudinal and lateral modes)
+
+  4. From the eigenvalues, MATLAB classifies each mode:
+       Short Period:   high-frequency, well-damped pitch oscillation (want zeta > 0.35)
+       Phugoid:        low-frequency speed/pitch exchange (want zeta > 0)
+       Dutch Roll:     coupled yaw-roll oscillation (want zeta*wn > 0.19)
+       Roll Subsidence: first-order roll decay (want tau < 1.0 s)
+       Spiral:         slow roll divergence (want t_half > 20 s)
+
+  Important: The "Static Margin" reported by AVL is the authoritative value.
+  The simpler static margin in the main.m static stability section uses a
+  rough neutral point at 25% MAC, which is less accurate.
+
+--------------------------------------------------------------------------------
+  AIRFOIL SURROGATE DATABASE
+--------------------------------------------------------------------------------
+
+Running XFOIL every time would be too slow (2–5 s per airfoil per Re).
+Instead, we precompute all results offline:
+
+  buildAirfoilSurrogates.m  ← run once, saves data/models/airfoilDB.mat
+
+At runtime, main.m calls:
+  loadAirfoilSurrogateDB(repoRoot)  ← loads the .mat file (fast)
+  evaluateAirfoilSurrogate(db, 'e222.dat', Re_root)  ← interpolates at Re
+
+The database stores for each airfoil at each Reynolds number:
+  Cla        [1/deg]   — lift curve slope
+  alphaL0    [deg]     — zero-lift angle of attack
+  Cm0        [-]       — pitching moment at zero lift
+  Cl_max     [-]       — maximum lift coefficient
+  best_LD    [-]       — maximum L/D
+
+The optimizer uses this database internally so AVL calls (not XFOIL) are the
+bottleneck during optimization.
+
+--------------------------------------------------------------------------------
+  ADDING A NEW AIRFOIL
+--------------------------------------------------------------------------------
+
+1. Put the airfoil .dat file in data/airfoils/ (XFOIL format: two columns x/c, y/c)
+
+2. Open buildAirfoilSurrogates.m and add the filename to the airfoil list
+
+3. Run buildAirfoilSurrogates.m once — this regenerates airfoilDB.mat
+
+4. In main.m, change:
+      airfoilRootName = 'your_new_airfoil.dat';
+   or
+      airfoilTipName  = 'your_new_airfoil.dat';
+
+5. For the fuselage airfoil, add an entry to the airfoilFileMap struct in main.m
+   and change fuselageAirfoil = 'your_new_airfoil_name';
+
+--------------------------------------------------------------------------------
+  MASS PROPERTIES — HOW COMPONENTS ARE DEFINED
+--------------------------------------------------------------------------------
+
+Every physical object on the aircraft is entered as either:
+
+  (a) A CAD body from massIn.cadBodies:
+      These come from Onshape. Each CAD body has a measured mass and CG
+      from the CAD model. The cadMass struct is populated near the top of
+      the mass properties section in main.m.
+
+  (b) A discrete point mass using makePointMass():
+      comp(end+1) = makePointMass('Motor', 0.085, [0.0, 0.0, 0.0]);
+      comp(end+1) = makePointMass('Battery', 0.150, [0.551, 0.0, -0.009]);
+      comp(end+1) = makePointMass('Payload', 0.800/9.81*9.81, [x, y, z]);
+      Arguments: name (string), mass [kg], position [x, y, z] in meters
+                 x=0 is motor, x increases aft toward tail
+
+  aircraftMassProperties() combines all of these, applies the parallel-axis
+  theorem, and returns the total mass, CG, and inertia tensor.
+
+  To move the battery for static margin correction:
+  Find the line with 'B1 Main Battery' and change the x-coordinate.
+  The SM Correction Advisor at the bottom of main.m tells you what x to use.
+
+--------------------------------------------------------------------------------
+  UNITS CONVENTION
+--------------------------------------------------------------------------------
+
+  All quantities in SI unless otherwise noted.
+  Length:      meters [m]
+  Mass:        kilograms [kg]
+  Force:       Newtons [N]
+  Angle:       degrees [deg] at input/output; radians inside stability functions
+  Speed:       meters per second [m/s]
+  Pressure:    Pascals [Pa]
+  Energy:      Joules [J]
+  Power:       Watts [W]
+  Area:        square meters [m²]
+  Volume:      cubic meters [m³]  (multiply by 1000 for liters)
+  Profit J:    dollars per second [$/s]  (multiply by 3600 for $/hr)
+
+  The competition scoring function expects:
+    Ef in [J] (total energy over 20 flights)
+    Tf in [s] (total time over 20 flights)
+  The x20 scaling is applied in main.m before calling profitPerUnitTime().
+
+--------------------------------------------------------------------------------
+  COMMON DEBUGGING TIPS
+--------------------------------------------------------------------------------
+
+Q: main.m crashes with "file not found" on airfoilDB.mat
+A: Run buildAirfoilSurrogates.m once to generate the database.
+
+Q: AVL gives wrong static margin
+A: Check that the battery x-position in the mass properties section matches
+   what the SM Correction Advisor recommends. Also verify that the .mass file
+   CG printed in the AVL output matches main.m's aircraftMassProperties output.
+
+Q: Optimizer returns -$1.94/hr or clearly wrong results
+A: Workers have cached old bytecode. Run:
+     delete(gcp('nocreate')); clear functions;
+   before profitOptimization(). This is already in main.m when runOptimizer=true.
+
+Q: Stall speed is above 12 m/s
+A: Wing loading W/S is too high. Either increase S_ref (lower WS in optimizer
+   bounds) or reduce gross weight.
+
+Q: Feasible@climb = 0 in CTOL sizing
+A: Check that V_climb in the mission struct is above the design stall speed.
+   The CTOL sizing code checks thrust at V_climb against the T/W required for
+   the governing constraint — if V_climb < V_stall, the aircraft cannot fly
+   at that speed and the check fails.
+
+Q: "pattern not found: CDa" warning from dynamicStabilityAVL
+A: This is cosmetic. AVL does not output CDa in all run configurations.
+   The code handles this gracefully and the warning does not affect results.
+
+--------------------------------------------------------------------------------
+  DESIGN VARIABLES CONTROLLED BY THE OPTIMIZER
+--------------------------------------------------------------------------------
+
+  Index  Variable             Units   Lower  Upper
+  ─────  ─────────────────────────────────────────────────────
+    1    AR                   [-]     4.0    10.0
+    2    Taper ratio          [-]     0.50   0.80
+    3    Wing sweep (c/4)     [deg]   0.0    35.0
+    4    Root twist           [deg]  -3.0   -1.0    (forced washout)
+    5    Wing loading W/S     [N/m²]  20.0   90.0
+    6    xLE root             [m]     0.030  0.300
+    7    Vertical fin AR      [-]     2.00   2.50
+    8    Vertical fin taper   [-]     0.30   0.70
+    9    Vertical fin sweep   [deg]   20.0   45.0
+   10    Cruise speed         [m/s]   20.0   28.0
+   11    Payload volume Vp    [m³]    0.001  0.030
+   12    Fuselage half-width  [m]     0.050  0.200
+   13    Fuselage length      [m]     0.600  1.000
+
+  When the optimizer finishes, it prints a block labeled
+  "--- Update main.m with these values ---"
+  Copy those values into the corresponding lines in main.m and re-run.
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
