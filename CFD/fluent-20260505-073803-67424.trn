@@ -1,0 +1,566 @@
+Auto-Transcript Start Time:  07:38:03, 05 May 2026 Pacific Daylight Time 
+Current Directory: "C:\Users\johns\MAE155B-Aircraft-Design\CFD"
+
+              Welcome to ANSYS Fluent 2026 R1
+
+              Copyright 2026 Synopsys, Inc. and ANSYS, Inc. All rights reserved.
+              Unauthorized use, distribution or duplication is prohibited.
+              This product is subject to U.S. laws governing export and re-export.
+              For full Legal Notice, see documentation.
+
+Build Time: Feb  2 2026 16:32:00 EST  Build Id: 10262  
+ 
+Connected License Server List:	<Non FlexNet Publisher License Server (FNPLS)>
+
+     --------------------------------------------------------------
+     This is a student version of ANSYS FLUENT. Usage of this product
+     license is limited to the terms and conditions specified in your ANSYS
+     license form, additional terms section.
+     --------------------------------------------------------------
+Host spawning Node 0 on machine "SigaSurfaceMk3" (win64).
+Host waiting for connection from Node 0 at 127.0.0.1:65343 
+
+Node 0 connecting to the Host ... connection established.
+
+-------------------------------------------------------------------------------
+ID    Hostname        Core  O.S.         PID    CPU Model Name
+-------------------------------------------------------------------------------
+n0    SigaSurfaceMk3  1/12  Windows-x64  70028  UNKNOWN
+host  SigaSurfaceMk3        Windows-x64  59996  UNKNOWN
+
+MPI Option Selected: intel
+-------------------------------------------------------------------------------
+
+Cleanup script file is C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\cleanup-fluent-SigaSurfaceMk3-59996.bat
+
+SigaSurfaceMk3 is already loaded (24.3245).                       Process affinity not being set.
+
+Graphics driver currently in use: dx11
+
+(cx-gui-do cx-activate-tab-index "NavigationPane*Frame1(TreeTab)" 0)
+
+Reading journal file C:\Users\johns\AppData\Local\Temp\180474e1-f901-4bd8-8db6-e2f625735131.jou...
+
+> /file/set-tui-version "26.1"
+
+> (%py-exec "workflow.InitializeWorkflow(WorkflowType = r'Watertight Geometry')")
+()
+
+
+> (%py-exec "workflow.TaskObject['Import Geometry'].Arguments.setState({r'FileName': r'C:\Users\johns\MAE155B-Aircraft-Design\CFD\CFD Model.scdocx', r'LengthUnit': r'mm',})")
+()
+
+
+> (%py-exec "workflow.TaskObject['Import Geometry'].Execute()")
+
+Importing one geom object per program-controlled and one zone per body ...
+    C:\\Program Files\\ANSYS Inc\\ANSYS Student\\v261\\commonfiles\\CPython\\3_10\\winx64\\Release\\python\\..\\Ansys\\TGrid\\CADReaders.py started by johns on SigaSurfaceMk3 winx64 on Tue May  5 07:41:03 2026
+    using Python 3.10.19 (remotes/origin/54ee32c922d15cece27c63aab31ba27b8fb8da4e-dirty:54ee32c9, Dec  2 2) [MSC v.1942 64 bit (AMD64)]
+    
+    using Ansys.Meshing.FieldMesher build Feb  3 2026 15:07:12
+    
+    running ANSYS TGrid CADToTGridConverter ...
+    setting up parameters ...
+    setting up parameters done.
+    running conversion ...
+    converting 1 file(s) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424/out1777991909.87693267424.tgf'
+    converting file 'CFD Model.scdocx' (1 of 1) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424'
+    importing data ...
+    importing meshing model from PartMgr from file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx' ...
+    setting enclosure and symmetry processing to False
+    setting transfer named selections to True
+    setting named selection prefixes to ''
+    setting mixed import resolution type to 'SolidAndSurface'
+    setting target application to 'FluentMeshing'
+    attaching to assembly ...
+    attaching to assembly done in 52.746 [s]
+    processing assembly 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx' with ID 1 and reference key '<?xml version="1.0" encoding="utf-16"?>
+    <IdTable xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Table>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <IsLegacyLabel>false</IsLegacyLabel>
+          </AssemblyVersionInfo>
+          <Text>~sEf682a580-8256-41ac-b130-fad5b2de5b89.2_#</Text>
+          <Id>10000</Id>
+          <IsExploded>false</IsExploded>
+        </Entry>
+      </Table>
+      <AssemblyVersionInfo>
+        <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+        <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+        <IsLegacyLabel>false</IsLegacyLabel>
+      </AssemblyVersionInfo>
+    </IdTable>'
+    length unit = [m]
+    processing part 'CFD Model' with ID 3
+    processing named selection 'inlet'
+    processing named selection 'outlet'
+    processing named selection 'TE_LE'
+    processing named selection 'Drone'
+    processing named selection 'symmetry'
+    processing named selection 'Walls'
+    processing data ...
+    removing named collections of entities ...
+    removing named collections of entities stopped, no named collections selected.
+    analyzing feature edges ...
+    detecting feature edges, feature angle = 40 [deg] ...
+        Data information
+            Meshing model
+                Attributes:
+                    'LengthUnit': '[mm]'
+                Entity summary:
+                    Collection: 6
+                    Component : 2
+                    Body      : 1
+                    Shell     : 1
+                    Face      : 22
+                    Loop      : 23
+                    Edge      : 53
+                    Vertex    : 34
+                    Surface   : 22
+                    Curve     : 53
+                Tessellation summary:
+                    Face facets  : 2616
+                    Edge segments: 922
+                Bounding box:
+                    (-2000.000000000001, -2000, -1000) x (7000, 8.572527594055442e-13, 1000)
+                Assembly component hierarchy:
+                    'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx'
+                      'CFD Model'
+                NamedCollections:
+                    'inlet'
+                    'outlet'
+                    'TE_LE'
+                    'Drone'
+                    'symmetry'
+                    'Walls'
+    
+    
+    exporting FLTG data to file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\out1777991909.87693267424.tgf' ...
+    writing face-based mesh file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\out1777991909.87693267424.tgf' ...
+    ======== Exported Data ========
+    Entity summary:
+        Object       : 1
+        Object region: 7
+        Zone         : 17
+    
+    running conversion done.
+    running ANSYS TGrid CADToTGridConverter done.
+    ran ANSYS TGrid CADToTGridConverter in 54.683 [s]
+        ======== Command Execution Log Manager ========
+        Number of execution logs: 0
+    
+
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424/out1777991909.87693267424.tgf"...
+
+nodes: 2121
+edges: 829
+faces: 2604
+cells: 0
+analyzing boundary connectivity...done.
+
+using plugIn session Discovery[64120]
+
+---------------- Import of CFD_Model, consisting of one single part/object , complete. 
+ 
+
+---------------- Import complete in  3.87 minutes.
+()
+
+
+> 
+Meshing> (cx-use-window-id 51)
+(cx-set-camera-relative '(-68975.6 -60506.2 -4854.87) '(0 0 0) '(0.750623 -0.331928 1.39243) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(5795.87 56381.3 -2979.94) '(0 0 0) '(0.117518 -0.486286 0.0306818) 0 0)
+(cx-use-window-id 51)
+(handle-key "control ??")
+(cx-use-window-id 51)
+(dolly-camera -3116.54 3133.76 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(1030.7 2093.42 -1962.11) '(0 0 0) '(-0.0220264 0.0198012 0.0106346) 0 0)
+
+---------------- A local size of 10 was added to drone-face
+
+---------------- A local size of 2 was added to le-te
+
+---------------- A local size of 100 was added to inlet
+
+---------------- A local size of 150 was added to outlet
+
+---------------- A local size of 150 was added to walls
+
+---------------- A local size of 150 was added to symmetry
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\TaskObject3.msh.h5" ...
+writing 1 node zones
+writing 12 edge zones 
+writing 5 face zones 
+writing node curvature data
+done.
+---------------- The Global Growth Rate was adjusted to 1.35 
+    processing size functions/scoped sizing to create Size Field...
+
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\CFD_Model.sf"...
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\CFD_Model.sf"...
+Done.
+
+
+Importing one mesh object per program-controlled and one zone per body ...
+    C:\\Program Files\\ANSYS Inc\\ANSYS Student\\v261\\commonfiles\\CPython\\3_10\\winx64\\Release\\python\\..\\Ansys\\TGrid\\CADReaders.py started by johns on SigaSurfaceMk3 winx64 on Tue May  5 07:55:28 2026
+    using Python 3.10.19 (remotes/origin/54ee32c922d15cece27c63aab31ba27b8fb8da4e-dirty:54ee32c9, Dec  2 2) [MSC v.1942 64 bit (AMD64)]
+    
+    using Ansys.Meshing.FieldMesher build Feb  3 2026 15:07:12
+    
+    running ANSYS TGrid CADToTGridConverter ...
+    setting up parameters ...
+    setting up parameters done.
+    running conversion ...
+    converting 1 file(s) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424/out1777992927.28551867424.tgf'
+    converting file 'CFD Model.scdocx.pmdb' (1 of 1) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424'
+    importing data ...
+    importing meshing model from PartMgr from file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\\\CFD Model.scdocx.pmdb' ...
+    setting enclosure and symmetry processing to False
+    setting transfer named selections to True
+    setting named selection prefixes to ''
+    setting mixed import resolution type to 'SolidAndSurface'
+    setting target application to 'FluentMeshing'
+    initializing part manager from file ...
+    processing assembly 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx' with ID 1 and reference key '<?xml version="1.0" encoding="utf-16"?>
+    <IdTable xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Table>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <IsLegacyLabel>false</IsLegacyLabel>
+          </AssemblyVersionInfo>
+          <Text>~sEf682a580-8256-41ac-b130-fad5b2de5b89.2_#</Text>
+          <Id>10000</Id>
+          <IsExploded>false</IsExploded>
+        </Entry>
+      </Table>
+      <AssemblyVersionInfo>
+        <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+        <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+        <IsLegacyLabel>false</IsLegacyLabel>
+      </AssemblyVersionInfo>
+    </IdTable>'
+    length unit = [m]
+    processing part 'CFD Model' with ID 3
+    processing named selection 'inlet'
+    processing named selection 'outlet'
+    processing named selection 'TE_LE'
+    processing named selection 'Drone'
+    processing named selection 'symmetry'
+    processing named selection 'Walls'
+    processing data ...
+    loading size function background grid from file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\\\CFD_Model.sf' ...
+    reading size function background grid file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\\\CFD_Model.sf' ...
+     Read 266462 vertices
+    initializing size function background grid done in 0.149 [s]
+    Error: Breakout detected
+    
+    tessellating 22 faces done in 27.467 [s]
+    removing named collections of entities ...
+    removing named collections of entities stopped, no named collections selected.
+    analyzing feature edges ...
+    detecting feature edges, feature angle = 40 [deg], secondary feature angle = 5 [deg] ...
+        Data information
+            Meshing model
+                Attributes:
+                    'LengthUnit': '[mm]'
+                Entity summary:
+                    Collection: 6
+                    Component : 2
+                    Body      : 1
+                    Shell     : 1
+                    Face      : 22
+                    Loop      : 23
+                    Edge      : 53
+                    Vertex    : 34
+                    Surface   : 22
+                    Curve     : 53
+                Tessellation summary:
+                    Face facets  : 78848
+                    Edge segments: 2721
+                Bounding box:
+                    (-2000, -2000, -1000) x (7000, 8.57252745352366e-13, 1000)
+                Assembly component hierarchy:
+                    'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx'
+                      'CFD Model'
+                NamedCollections:
+                    'inlet'
+                    'outlet'
+                    'TE_LE'
+                    'Drone'
+                    'symmetry'
+                    'Walls'
+    
+    
+    exporting FLTG data to file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\out1777992927.28551867424.tgf' ...
+    writing face-based mesh file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_67424\\out1777992927.28551867424.tgf' ...
+    ======== Exported Data ========
+    Entity summary:
+        Object       : 1
+        Object region: 7
+        Zone         : 19
+    
+    running conversion done.
+    running ANSYS TGrid CADToTGridConverter done.
+    ran ANSYS TGrid CADToTGridConverter in 29.320 [s]
+        ======== Command Execution Log Manager ========
+        Number of execution logs: 0
+    
+
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424/out1777992927.28551867424.tgf"...
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424/out1777992927.28551867424.tgf"...
+nodes: 41756
+edges: 2341
+faces: 78848
+cells: 0
+appending mesh...
+done.
+
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\\CFD_Model.sf"...
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\\CFD_Model.sf"...
+ Read 266462 vertices
+0 faces marked.
+
+    computing regions...done
+Deleting import_curvature_0
+    processing size functions/scoped sizing to create Size Field...
+
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\CFD_Model.sf"...
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\CFD_Model.sf"...
+Done.
+
+
+remeshing...
+
+
+------------------------- --------------------- -------------------- ---------------- ----------
+                     name skewed-cells (> 0.80)    averaged-skewness maximum-skewness face count
+------------------------- --------------------- -------------------- ---------------- ----------
+
+          cfd-model-solid                     3          0.029723325                1      63955
+------------------------- --------------------- -------------------- ---------------- ----------
+                     name skewed-cells (> 0.80)    averaged-skewness maximum-skewness face count
+------------------------- --------------------- -------------------- ---------------- ----------
+
+          cfd-model-solid                     3          0.029723325                1      63955
+
+---------------- After Surface mesh, the model consists of 1 fluid/solid regions and 0 voids.
+
+---------------- Surface Meshing of CFD_Model complete in  0.74 minutes, with a maximum skewness of  1.00. 
+
+
+---- Warning--- To improve the quality, insert the 'Improve Surface Mesh' task
+
+(cx-use-window-id 51)
+(cx-set-camera-relative '(8814.15 -40018.7 12922.7) '(0 0 0) '(0.968223 0.0966818 0.13299) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(-61832.1 -19825.3 588.191) '(0 0 0) '(0.144255 -0.360601 1.02158) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(-21954.7 35548.6 -23241.4) '(0 0 0) '(-0.246092 -0.252212 0.25609) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(3777.53 15116.2 -14207.4) '(0 0 0) '(-0.197618 -0.0112393 0.0584782) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(5.02222 8.12634 -2.38171) '(0 0 0) '(0 0 0) 0 0)
+(cx-use-window-id 51)
+(cx-set-camera-relative '(-145.662 -237.115 -628.422) '(0 0 0) '(-0.0835854 0.0511273 0.000120938) 0 0)
+
+---------------- Describe Geometry task complete in  0.00 minutes.
+removed 950 faces.
+
+Error: A cap could not be created using the specified zone/label. Ensure your zone/label encloses the whole opening.
+Error Object: #f
+
+Error: A cap could not be created using the specified zone/label. Ensure your zone/label encloses the whole opening.
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_ExecuteTask: A cap could not be created using the specified zone/label. Ensure your zone/label encloses the whole opening.
+Error Object: ()
+
+Error: state/object/execute-command:Exception encountered in S_ExecuteTask: A cap could not be created using the specified zone/label. Ensure your zone/label encloses the whole opening.
+Error Object: ()
+
+Error: state/object/execute-command:Exception encountered in S_AddChildAndUpdate: state/object/execute-command:Exception encountered in S_ExecuteTask: A cap could not be created using the specified zone/label. Ensure your zone/label encloses the whole opening.
+Error Object: ()
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\TaskObject8.msh.h5" ...
+writing 4 node zones
+writing 26 edge zones 
+writing 10 face zones 
+writing node curvature data
+done.
+    updating regions...
+
+Warning: 1 internal baffles identified.
+Check for leaks and self-intersections in the mesh, if these are not expected.
+
+         region-name    number of baffles zone ids of baffles
+-------------------- -------------------- --------------------
+     cfd-model-solid                    1               (1814)
+
+    done.
+---- Warning--- The number of flow volumes specified are greater than expected. If all regions are fluids, choose that option in Describe Geometry
+
+---- Warning--- One or more fluid regions could not be detected. Verify the names and types of your regions using the Update Region task.
+
+---- Warning--- The initial surface mesh quality is  1.00. Insert the Surface Mesh Improve task to obtain a better mesh quality.
+
+---------------- Region identification of cfd-model-solid was not successful. 
+
+---------------- Regions Updated
+
+---- Warning--- The Max Cell Length is updated to reflect the actual max size in the octree hexcore.
+Writing "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_67424\TaskObject11.msh.h5" ...
+writing 4 node zones
+writing 26 edge zones 
+writing 11 face zones 
+writing node curvature data
+done.
+checking object "cfd-model-solid"...
+    skipping validating regions of mesh object "cfd-model-solid"...done.
+auto meshing object cfd-model-solid...
+
+Identifying Topology...
+
+The octree hexcore cells will be refined using local surface mesh sizes and body of influence (boi) size controls, if there are any defined.
+Generating Pyramids...
+
+Generating initial mesh...
+<warning>Warning: edge bn48330-bn48331 intersects face bf85665 (943.583968 -64.581315 45.169289).
+
+</warning>
+Error at Node 0: tet intialization failed possibly due to duplicate nodes/faces or intersections.
+(cx-gui-do cx-activate-item "Error*OK")
+
+delete virtual and dead zones.
+
+Merging zones...
+
+Cleaning up dead entities...
+
+
+Merging Domains...
+
+Warning: "cfd-model-solid" region has failed to get cells.
+done.
+Warning: Deleting empty objects (cfd-model-solid)
+
+
+Error: GENERAL-CAR-CDR: invalid argument [1]: improper list
+Error Object: #f
+
+Error: An error occured during task update
+
+Poly meshing not completed.
+
+
+Poly meshing not completed.
+
+Auto mesh failed.
+Error Object: #f
+
+Error: An error occured during task update
+
+Poly meshing not completed.
+
+
+Poly meshing not completed.
+
+Auto mesh failed.
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_ExecuteTask: An error occured during task update
+
+Poly meshing not completed.
+
+
+Poly meshing not completed.
+
+Auto mesh failed.
+Error Object: ()
+(cx-gui-do cx-activate-item "Error*OK")
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_AddChildAndUpdate: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: ()
+(cx-gui-do cx-activate-item "Error*OK")
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_AddChildAndUpdate: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: ()
+(cx-gui-do cx-activate-item "Error*OK")
+
+Error: arg(2nd) out of range in string-ref
+Error Object: 0
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_AddChildAndUpdate: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: ()
+(cx-gui-do cx-activate-item "Error*OK")
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: #f
+
+Error: state/object/execute-command:Exception encountered in S_AddChildAndUpdate: Failed to update task "Enclose Fluid Regions (Capping)" as value(s) for below argument(s) are not provided: 
+
+Labels
+
+Error Object: ()
+(cx-gui-do cx-activate-item "Error*OK")

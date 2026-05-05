@@ -49,3 +49,9 @@ external/xfoil/*.zip
 external/xfoil/*.dmg
 external/xfoil/src_optional/
 external/xfoil/Xfoil699src/
+
+/.claude/worktrees/
+
+/CFD/FM_SigaSurfaceMk3_28524/
+
+/CFD/FM_SigaSurfaceMk3_67424/

@@ -1,0 +1,174 @@
+Auto-Transcript Start Time:  08:20:28, 05 May 2026 Pacific Daylight Time 
+Current Directory: "C:\Users\johns\MAE155B-Aircraft-Design\CFD"
+
+              Welcome to ANSYS Fluent 2026 R1
+
+              Copyright 2026 Synopsys, Inc. and ANSYS, Inc. All rights reserved.
+              Unauthorized use, distribution or duplication is prohibited.
+              This product is subject to U.S. laws governing export and re-export.
+              For full Legal Notice, see documentation.
+
+Build Time: Feb  2 2026 16:32:00 EST  Build Id: 10262  
+ 
+Connected License Server List:	<Non FlexNet Publisher License Server (FNPLS)>
+
+     --------------------------------------------------------------
+     This is a student version of ANSYS FLUENT. Usage of this product
+     license is limited to the terms and conditions specified in your ANSYS
+     license form, additional terms section.
+     --------------------------------------------------------------
+Host spawning Node 0 on machine "SigaSurfaceMk3" (win64).
+Host waiting for connection from Node 0 at 127.0.0.1:60624 
+
+Node 0 connecting to the Host ... connection established.
+
+-------------------------------------------------------------------------------
+ID    Hostname        Core  O.S.         PID    CPU Model Name
+-------------------------------------------------------------------------------
+n0    SigaSurfaceMk3  1/12  Windows-x64  46604  UNKNOWN
+host  SigaSurfaceMk3        Windows-x64  65240  UNKNOWN
+
+MPI Option Selected: intel
+-------------------------------------------------------------------------------
+
+Cleanup script file is C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\cleanup-fluent-SigaSurfaceMk3-65240.bat
+
+SigaSurfaceMk3 is already loaded (24.3035).                       Process affinity not being set.
+
+Graphics driver currently in use: dx11
+
+(cx-gui-do cx-activate-tab-index "NavigationPane*Frame1(TreeTab)" 0)
+
+Reading journal file C:\Users\johns\AppData\Local\Temp\094e06bd-022f-448d-8598-e216a33fe8b3.jou...
+
+> /file/set-tui-version "26.1"
+
+> (%py-exec "workflow.InitializeWorkflow(WorkflowType = r'Watertight Geometry')")
+()
+
+
+> (%py-exec "workflow.TaskObject['Import Geometry'].Arguments.setState({r'FileName': r'C:\Users\johns\MAE155B-Aircraft-Design\CFD\CFD Model.scdocx', r'LengthUnit': r'mm',})")
+()
+
+
+> (%py-exec "workflow.TaskObject['Import Geometry'].Execute()")
+
+Importing one geom object per program-controlled and one zone per body ...
+    C:\\Program Files\\ANSYS Inc\\ANSYS Student\\v261\\commonfiles\\CPython\\3_10\\winx64\\Release\\python\\..\\Ansys\\TGrid\\CADReaders.py started by johns on SigaSurfaceMk3 winx64 on Tue May  5 08:21:16 2026
+    using Python 3.10.19 (remotes/origin/54ee32c922d15cece27c63aab31ba27b8fb8da4e-dirty:54ee32c9, Dec  2 2) [MSC v.1942 64 bit (AMD64)]
+    
+    using Ansys.Meshing.FieldMesher build Feb  3 2026 15:07:12
+    
+    running ANSYS TGrid CADToTGridConverter ...
+    setting up parameters ...
+    setting up parameters done.
+    running conversion ...
+    converting 1 file(s) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_28524/out1777994451.45061328524.tgf'
+    converting file 'CFD Model.scdocx' (1 of 1) from Workbench to FLTG using output path 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_28524'
+    importing data ...
+    importing meshing model from PartMgr from file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx' ...
+    setting enclosure and symmetry processing to False
+    setting transfer named selections to True
+    setting named selection prefixes to ''
+    setting mixed import resolution type to 'SolidAndSurface'
+    setting target application to 'FluentMeshing'
+    attaching to assembly ...
+    attaching to assembly done in 35.599 [s]
+    processing assembly 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx' with ID 1 and reference key '<?xml version="1.0" encoding="utf-16"?>
+    <IdTable xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Table>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <IsLegacyLabel>false</IsLegacyLabel>
+          </AssemblyVersionInfo>
+          <Text>~sEf682a580-8256-41ac-b130-fad5b2de5b89.2_#</Text>
+          <Id>10000</Id>
+          <IsExploded>false</IsExploded>
+        </Entry>
+      </Table>
+      <AssemblyVersionInfo>
+        <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+        <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+        <IsLegacyLabel>false</IsLegacyLabel>
+      </AssemblyVersionInfo>
+    </IdTable>'
+    length unit = [m]
+    processing part 'CFD Model' with ID 3
+    processing named selection 'inlet'
+    processing named selection 'outlet'
+    processing named selection 'TE_LE'
+    processing named selection 'Drone'
+    processing named selection 'symmetry'
+    processing named selection 'Walls'
+    processing data ...
+    removing named collections of entities ...
+    removing named collections of entities stopped, no named collections selected.
+    analyzing feature edges ...
+    detecting feature edges, feature angle = 40 [deg] ...
+        Data information
+            Meshing model
+                Attributes:
+                    'LengthUnit': '[mm]'
+                Entity summary:
+                    Collection: 6
+                    Component : 2
+                    Body      : 1
+                    Shell     : 1
+                    Face      : 22
+                    Loop      : 23
+                    Edge      : 53
+                    Vertex    : 34
+                    Surface   : 22
+                    Curve     : 53
+                Tessellation summary:
+                    Face facets  : 2616
+                    Edge segments: 922
+                Bounding box:
+                    (-2000.000000000001, -2000, -1000) x (7000, 8.572527594055442e-13, 1000)
+                Assembly component hierarchy:
+                    'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\CFD Model.scdocx'
+                      'CFD Model'
+                NamedCollections:
+                    'inlet'
+                    'outlet'
+                    'TE_LE'
+                    'Drone'
+                    'symmetry'
+                    'Walls'
+    
+    
+    exporting FLTG data to file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_28524\\out1777994451.45061328524.tgf' ...
+    writing face-based mesh file 'C:\\Users\\johns\\MAE155B-Aircraft-Design\\CFD\\FM_SigaSurfaceMk3_28524\\out1777994451.45061328524.tgf' ...
+    ======== Exported Data ========
+    Entity summary:
+        Object       : 1
+        Object region: 7
+        Zone         : 17
+    
+    running conversion done.
+    running ANSYS TGrid CADToTGridConverter done.
+    ran ANSYS TGrid CADToTGridConverter in 36.563 [s]
+        ======== Command Execution Log Manager ========
+        Number of execution logs: 0
+    
+
+Reading "C:\Users\johns\MAE155B-Aircraft-Design\CFD\FM_SigaSurfaceMk3_28524/out1777994451.45061328524.tgf"...
+
+nodes: 2121
+edges: 829
+faces: 2604
+cells: 0
+analyzing boundary connectivity...done.
+
+using plugIn session Discovery[75920]
+
+---------------- Import of CFD_Model, consisting of one single part/object , complete. 
+ 
+
+---------------- Import complete in  1.44 minutes.
+()
+
+
+> 
