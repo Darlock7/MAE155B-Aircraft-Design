@@ -27,6 +27,8 @@ xfoil_polar_*.txt
 results/
 output/
 figures/
+outputs/manufacturing_dimensions.txt
+outputs/main_output.txt
 
 # AVL generated files (regenerated every run)
 AVL/fw_dyn.avl
