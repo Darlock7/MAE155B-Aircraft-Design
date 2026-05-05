@@ -818,7 +818,7 @@ vertIn.z_root_v_m   = wingIn.z_root_m;
 vertIn.airfoilName = 'NACA0010';
 
 % ---------- Rudder sizing ----------
-vertIn.rudder.enable      = false;  % removed — delta winglet at 65° sweep gives Cndr≈0, no useful yaw authority
+vertIn.rudder.enable      = true;   % kept — effectiveness improves significantly with fin geometry fix (sweep 65°→41.5°)
 vertIn.rudder.useTopOnly  = true;
 vertIn.rudder.eta_start   = 0.15;
 vertIn.rudder.eta_end     = 0.95;
