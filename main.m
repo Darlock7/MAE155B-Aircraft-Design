@@ -79,7 +79,7 @@ modelCenterbody = true;   % true = include fuselage as AVL lifting surface (MH95
 
 % Long-running analyses (keep false for normal design runs)
 useDragBuildUp  = true;   % true = compute CD0 from geometry build-up
-runCSopt        = false;  % true = CMA-ES elevon optimizer          
+runCSopt        = false;  % true = CMA-ES elevon optimizer
 runSweep        = false;  % true = dynamic stability parameter sweep 
 runOptimization = false;  % true = CMA-ES dynamic stability optimizer (~30 min)
 runMonteCarlo   = false;   % true = Monte Carlo profit sensitivity analysis (~30 s)
@@ -538,9 +538,9 @@ wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
-wingIn.eta_cs_start  = 0.617;   % starts at 61.7% semispan
-wingIn.eta_cs_end    = 0.949;   % ends at 94.9% semispan
-wingIn.cs_chord_frac = 0.449;   % 44.9% of local chord
+wingIn.eta_cs_start  = 0.309;   % starts at 30.9% semispan — CS optimizer result
+wingIn.eta_cs_end    = 0.759;   % ends at 75.9% semispan  — CS optimizer result
+wingIn.cs_chord_frac = 0.450;   % 45.0% of local chord    — CS optimizer result
 
 wingOut = wingGeometryDesign(wingIn);
 Swet_wing = 2.04 * wingOut.S_ref_m2;  % overwrite placeholder above
@@ -816,8 +816,8 @@ vertIn.rudder.enable      = true;
 vertIn.rudder.useTopOnly  = true;   % best match for winglet-like fin
 vertIn.rudder.eta_start   = 0.15;   % start at 15% of top exposed height
 vertIn.rudder.eta_end     = 0.95;   % end near tip
-vertIn.rudder.cf_root     = 0.332;  % rudder chord — CMA-ES optimized (runCSopt)
-vertIn.rudder.cf_tip      = 0.332;
+vertIn.rudder.cf_root     = 0.493;  % rudder chord — CS optimizer result (maxed out at bound; Cndr≈0 on delta winglet — needs fin geometry revision for real yaw authority)
+vertIn.rudder.cf_tip      = 0.493;
 
 % Run function
 vertOut = verticalSurfaceDesign(vertIn);
@@ -1668,7 +1668,16 @@ if runCSopt
     csOptIn.mass_kg         = massOut.mass_kg;
     csOptIn.delta_e_max     = 20;
     csOptIn.delta_r_max     = 25;
-    csOptIn.p_ss_min_dps    = 100;
+
+    % ---- mission-derived maneuver targets ----
+    % Roll rate: achieve 48° bank (n=1.5 turn) in 1 s × 1.5 safety margin
+    % 30 ft (~9.1 m) turns cited by RC pilot require ~10 m/s — below stall for this aircraft;
+    % tightest physically safe turn at n=1.5 is ~19.7 m (at Vs_turn = 14.7 m/s).
+    % Hard cap R_min at mission physics limit (V_cruise, n_turn).
+    phi_turn_deg        = acosd(1 / mission.n_turn);                         % [deg] bank angle
+    R_phys_m            = V_cruise^2 / (9.81 * tand(phi_turn_deg));          % [m]  mission turn radius
+    csOptIn.p_ss_min_dps    = 70;          % [deg/s] 48° in 1 s × 1.5 margin
+    csOptIn.R_min_max_m     = R_phys_m;    % [m]     hard reject above mission limit
     csOptIn.de_trim_max_deg = 15;
     csOptIn.eta_end_max     = 0.95;
 

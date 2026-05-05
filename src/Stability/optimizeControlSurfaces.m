@@ -27,7 +27,8 @@ function csOptOut = optimizeControlSurfaces(csOptIn)
 %   .ub              [4x1]  upper bounds (default [0.45; 0.70; 0.45; 0.50])
 %   .delta_e_max     [deg]  max elevon deflection    (default 20)
 %   .delta_r_max     [deg]  max rudder deflection    (default 25)
-%   .p_ss_min_dps    [deg/s] minimum roll rate       (default 100)
+%   .p_ss_min_dps    [deg/s] minimum roll rate — 48° bank in 1 s × 1.5 margin (default 70)
+%   .R_min_max_m     [m]    hard max turn radius at cruise — mission lap geometry (default 36.5)
 %   .de_trim_max_deg [deg]  max allowable trim deflection (default 15)
 %   .eta_end_max     [-]    max allowable eta_cs_end  (default 0.95)
 %   .maxGen          maximum CMA-ES generations      (default 100)
@@ -50,7 +51,8 @@ function csOptOut = optimizeControlSurfaces(csOptIn)
     if ~isfield(csOptIn,'ub'),              csOptIn.ub              = [0.45; 0.70; 0.45; 0.50]; end
     if ~isfield(csOptIn,'delta_e_max'),     csOptIn.delta_e_max     = 20;    end
     if ~isfield(csOptIn,'delta_r_max'),     csOptIn.delta_r_max     = 25;    end
-    if ~isfield(csOptIn,'p_ss_min_dps'),    csOptIn.p_ss_min_dps    = 100;   end
+    if ~isfield(csOptIn,'p_ss_min_dps'),    csOptIn.p_ss_min_dps    = 70;    end  % 48° bank in 1 s × 1.5 margin
+    if ~isfield(csOptIn,'R_min_max_m'),    csOptIn.R_min_max_m     = 36.5;  end  % mission hard cap at cruise speed
     if ~isfield(csOptIn,'de_trim_max_deg'), csOptIn.de_trim_max_deg = 15;    end
     if ~isfield(csOptIn,'eta_end_max'),     csOptIn.eta_end_max     = 0.95;  end
     if ~isfield(csOptIn,'maxGen'),          csOptIn.maxGen          = 100;   end
@@ -268,6 +270,9 @@ function [J, info] = cs_objective(x, ctx)
         Cn_rud = abs(dynOut_k.controlDerivs.Cndr) * ctx.delta_r_max;
         Cn_adv = abs(dynOut_k.controlDerivs.Cnda) * csIn_k.delta_e_max;
         Cn_ratio = Cn_rud / max(Cn_adv, 1e-9);
+
+        % hard constraint: must meet mission turn requirement at cruise speed
+        if R_min > ctx.R_min_max_m; return; end
 
         % primary objective: minimize turn radius
         J = R_min;
