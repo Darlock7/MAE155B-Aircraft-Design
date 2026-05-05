@@ -1,0 +1,72 @@
+Name	Variable type	Value	Description
+S	Any	0.3087 m^2	[Wing] Area
+AR	Number	8	[Wing] Area Aspect Ratio
+lambda	Any	0.661	[Wing] Tapper Ratio
+sweepC4	Angle	28.3	[Wing] Quarter Chord Sweep angle
+b	Length	sqrt(#AR * #S)	[Wing] Span
+semiSpan	Length	#b / 2	[Wing] half span
+cRoot	Length	(2 * #S) / (#b * (1 + #lambda))	[Wing] Root airfoil chord
+cTip	Length	#lambda * #cRoot	[Wing] Tip airfoil chord
+MAC	Length	(2 / 3) * #cRoot * ((1 + #lambda + #lambda^2) / (1 + #lambda))	[Wing]
+xLEroot	Length	0.0908	[Wing] The root is at origin lol
+yRoot	Length	2cm	[Wing] The root is at origin lol
+zRoot	Length	0	The root is at origin lol
+sweepLE	Angle	atan(tan(#sweepC4) + (1 - #lambda) / #AR)	Sweep ref \/
+xLEtip	Any	#xLEroot + #semiSpan * tan(#sweepLE)	
+xTEroot	Length	#xLEroot + #cRoot	
+xTEtip	Length	#xLEtip + #cTip	
+sweepTE	Angle	atan((#xTEtip - #xTEroot) / #semiSpan)	
+yMAC	Length	#semiSpan * (1 + 2 * #lambda) / (3 * (1 + #lambda))	MAC Locations \/
+xLE_MAC	Length	#xLEroot + #yMAC * tan(#sweepLE)	
+xQuarterMAC	Length	#xLE_MAC + 0.25 * #MAC	Quarter Chord Ref \/
+xQuarterRoot	Length	#xLEroot + 0.25 * #cRoot	
+xQuarterOffset	Length	#semiSpan * tan(#sweepC4)	
+GeoTipTwist	Angle	3.583	
+SparD	Length	10mm	[Wing]
+Sv	Any	0.0197 m^2	Vertical Stabilizers \/
+ARv	Number	1.5	
+lambdaV	Number	0.1	
+sweepC4v	Angle	60	
+xShiftV	Length	0	Shifts the whole Vertical stabilizer to cover the wing tip foil
+xLErootV	Length	#xLEtip + #xShiftV	
+yRootV	Length	#semiSpan	
+zRootV	Length	0	
+bv	Length	sqrt(#ARv * #Sv)	
+cCenterV	Length	(2 * #Sv) / (#bv * (1 + #lambdaV))	Center airfoil for vertical
+cTopV	Length	#lambdaV * #cCenterV	Tip top air foil for vertical stabilizer
+cBottomV	Length	#cTopV	Bottom tip air foil for vertical stabilizer
+MACv	Length	(2 / 3) * #cCenterV * ((1 + #lambdaV + #lambdaV^2) / (1 + #lambdaV))	
+topFrac	Number	0.66	
+zTop	Length	#topFrac * #bv	
+zBottom	Length	(1 - #topFrac) * #bv	
+xQuarterCenterV	Length	#xLErootV + 0.25 * #cCenterV	
+xQuarterTopV	Length	#xQuarterCenterV + #zTop * tan(#sweepC4v)	
+xQuarterBottomV	Length	#xQuarterCenterV + #zBottom * tan(#sweepC4v)	
+xLEcenterV	Length	#xLErootV	
+xLEtopV	Length	#xQuarterTopV - 0.25 * #cTopV	
+xLEbottomV	Length	#xQuarterBottomV - 0.25 * #cBottomV	
+A_Cargo_Bay	Any	0.0150000000000m^2	[Cargo Bay]
+Length_Cargo_Bay	Length	0.4	[Cargo Bay]
+Width_Cargo_Bay	Length	0.1491	[Cargo Bay]
+Height_Cargo_Bay	Length	0.1137	[Cargo Bay]
+X0_Cargo_Bay	Length	36 cm	[Cargo Bay]
+Z0_Cargo_Bay	Length	5cm	[Cargo Bay]
+CargoBayVolume	Any	#Width_Cargo_Bay*#Length_Cargo_Bay*#Height_Cargo_Bay	[Cargo Bay]
+NoseLength	Length	0	[Cargo Bay]
+Length_Fuselage	Length	0.95	[Fuselage]
+Wing_Fuselage_Join	Length	7cm	[Fuselage]
+degOffsetCargoBay	Angle	-2.5	
+FuselageOffsetZ	Length	4.5 cm	
+FuselageEndStart	Length	0	
+MotorDiameter	Length	3.1cm	
+Wp	Any	70.5 cm^3	
+Height_Wp	Length	1.75 cm	
+WpTop_A	Any	#Wp/#Height_Wp	
+Length_Width	Length	sqrt(#WpTop_A)	
+TailCone	Length	10cm	
+Wing_Fuselage_Join_Base_Chord	Length	0.7	
+Spar_distance	Length	2cm	
+Spar_Diamerter	Length	8mm	
+Spar_offset_y	Length	2mm	
+Spar_offset_x	Length	7cm	
+Elevon_	Length	0	
