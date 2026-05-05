@@ -68,6 +68,12 @@ fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timesta
 % –– top of main.m ––
 repoRoot = fileparts(mfilename('fullpath'));
 
+% Start command window logging to file
+outDir = fullfile(repoRoot, 'outputs');
+if ~exist(outDir, 'dir'), mkdir(outDir); end
+logFile = fullfile(outDir, 'main_output.txt');
+diary(logFile);
+
 %% =================== Run Flags =========================
 % Figures
 showPlots       = false;  % true = show all figures throughout the script
@@ -2346,3 +2352,6 @@ if runProfitOpt
     fprintf('  Optimization result saved to:\n   %s\n\n', optSaveFile);
 
 end
+
+% End command window logging
+diary off;
