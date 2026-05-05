@@ -1,0 +1,398 @@
+================================================================================
+  MAE 155B — PROFIT OPTIMIZATION: COMPLETE EXPLANATION
+  For professor presentation
+================================================================================
+
+
+--------------------------------------------------------------------------------
+  1. WHAT ARE WE MAXIMIZING? THE SCORING FUNCTION
+--------------------------------------------------------------------------------
+
+The competition gives us this formula:
+
+  J = (rWp*Wp + rVp*Vp - ce*Ef - cc) / Tf  -  (cWg*Wg)/tl  -  cf
+
+Every term means something physical:
+
+  Term           Coefficient              Meaning
+  ───────────────────────────────────────────────────────────────────────
+  rWp * Wp       $0.225 per Newton        Revenue from payload WEIGHT
+  rVp * Vp       $300 per m³              Revenue from payload VOLUME
+  -ce * Ef       -$1.39e-6 per Joule      ENERGY COST — penalizes fuel burn
+  -cc            -$0.50                   Fixed cost per flight
+  / Tf           divide by total time     Rewards flying FASTER
+  -cWg*Wg/tl     -$22.5/N amortized       STRUCTURAL COST — heavier aircraft
+                                           cost more over their life
+  -cf            -$0.000111/s             Fixed time operating cost
+
+The fundamental tension: to maximize J you want to carry heavy/large packages
+(revenue up), burn little energy (cost down), fly fast (Tf down), and be as
+light as possible (amortized cost down). These four goals fight each other
+constantly. A heavier payload needs a bigger wing, which burns more energy.
+A faster cruise speed requires more thrust, which burns more energy. The
+optimizer's job is to find the combination where these tradeoffs balance out
+at maximum profit.
+
+In our case, the optimizer always pushes payload volume to the maximum (30 L)
+because the revenue coefficient rVp = $300/m³ is large enough that more volume
+always outweighs the weight penalty. This is an important insight — the scoring
+function is telling us that volume matters more than weight for this competition.
+
+
+--------------------------------------------------------------------------------
+  2. WHY THIS IS A HARD PROBLEM
+--------------------------------------------------------------------------------
+
+Three properties make this impossible to solve with a simple gradient-based
+optimizer like MATLAB's fmincon:
+
+NON-CONVEX LANDSCAPE
+  There are multiple local optima. A low-AR wide wing can match profit with a
+  high-AR narrow wing through completely different tradeoffs in L/D, stall
+  speed, and structural mass. A gradient-based method gets trapped in whichever
+  basin it starts in and never finds the global optimum.
+
+NON-SMOOTH PHYSICS
+  The profit function has discontinuities because:
+  - AVL computes eigenvalues — stability mode classification (Level 1/2/3)
+    creates step changes in the objective
+  - Violated constraints return 1e6 immediately — a cliff, not a smooth slope
+  - Airfoil surrogates are piecewise-interpolated — kinks at Re boundaries
+  If you try to compute a numerical gradient near a constraint boundary, you
+  get noise, not useful information. Gradient descent follows that noise off
+  a cliff.
+
+EXPENSIVE EVALUATIONS
+  Each candidate design calls 6 physics models sequentially and runs the
+  external AVL binary (~2 seconds per evaluation). With ~13,000 total
+  evaluations, the optimizer runs 6-10 hours. You cannot afford to waste
+  evaluations. The algorithm must extract maximum information from every
+  function call.
+
+
+--------------------------------------------------------------------------------
+  3. WHY CMA-ES — NOT GRADIENT DESCENT, NOT A GENETIC ALGORITHM
+--------------------------------------------------------------------------------
+
+GRADIENT DESCENT (fmincon, Newton's method):
+  Requires derivatives. Our objective is non-smooth and has hard constraint
+  cliffs. Numerical gradients are unreliable and cause the optimizer to chase
+  noise rather than find the optimum. Not suitable.
+
+GENETIC ALGORITHMS:
+  Robust and don't need gradients, but they are stateless — they build no
+  internal model of the landscape. Each generation is essentially independent
+  of prior history. For a 7-hour-per-run budget, you need something that
+  learns from its history. Not efficient enough.
+
+CMA-ES (Covariance Matrix Adaptation Evolution Strategy):
+  Developed by Nikolaus Hansen at INRIA in 2001. It is specifically designed
+  for the class of problems we have: expensive, non-convex, non-smooth, 5-20
+  variables, no gradients available. It is the standard algorithm in aerospace
+  multidisciplinary design optimization for exactly this reason.
+
+  What makes it different: it LEARNS THE SHAPE of the search landscape as it
+  runs. Specifically, it learns which directions in the 13-dimensional design
+  space tend to produce better aircraft, and it biases future samples toward
+  those directions. This is fundamentally more efficient than a genetic
+  algorithm.
+
+
+--------------------------------------------------------------------------------
+  4. HOW CMA-ES WORKS — STEP BY STEP
+--------------------------------------------------------------------------------
+
+At every generation, CMA-ES maintains a multivariate Gaussian distribution
+over the normalized design space. This distribution has three components:
+
+  m  — mean vector: where the algorithm thinks the optimum currently is
+  σ  — step size: how widely to sample around that mean
+  C  — covariance matrix (13×13): the shape of the search — which directions
+       in parameter space are promising
+
+STEP 1 — SAMPLE lambda = 26 CANDIDATES:
+  Z = randn(13, 26)            ← 26 random vectors from standard normal
+  Y = eigenC * (diagD .* Z)    ← rotate and scale by covariance matrix C
+  X = m + σ * Y                ← candidate designs in normalized [0,1] space
+
+  The covariance matrix C determines the shape of the sample cloud.
+  Early in the run, C = I (identity) so samples form a sphere.
+  As learning proceeds, C elongates in the directions that produced
+  good designs, forming an ellipsoid aligned with the profit landscape.
+
+STEP 2 — EVALUATE ALL 26 CANDIDATES IN PARALLEL:
+  Each candidate goes through the full physics pipeline (described in
+  Section 6). Returns either a real profit J, or 1e6 if any constraint
+  is violated. MATLAB's parfor runs these in parallel across CPU cores.
+
+STEP 3 — RANK BY OBJECTIVE VALUE:
+  Sort all 26 results from best to worst (lowest -J = highest profit).
+
+STEP 4 — UPDATE THE MEAN TOWARD THE BEST HALF:
+  m_new = sum( w_i * x_i )   for i = 1 to 13  (top half of candidates)
+
+  Weights are log-spaced: the best candidate gets the most weight, the
+  13th best gets the least. The mean shifts toward where good solutions
+  were concentrated this generation.
+
+STEP 5 — UPDATE THE COVARIANCE MATRIX C:
+  This is the core innovation of CMA-ES. Two mechanisms work together:
+
+  Rank-1 update (evolution path pc):
+    Tracks the path the mean has moved over many consecutive generations.
+    If the mean consistently moves in one direction (e.g., AR always
+    increases when profit improves), C elongates along that direction
+    so future samples explore it more.
+
+  Rank-mu update:
+    Directly uses all 13 top solutions from this generation to estimate
+    which directions in parameter space produced good results. Updates
+    C toward the observed distribution of successful candidates.
+
+  After ~50 generations, if every good design had AR = 5-6 whenever
+  sweep = 30-35 degrees, the C matrix develops a positive correlation
+  between those two variables. Future samples automatically explore
+  consistent AR-sweep combinations.
+
+  This is fundamentally different from a genetic algorithm — CMA-ES
+  builds a probabilistic model of the fitness landscape and uses it.
+
+STEP 6 — ADAPT THE STEP SIZE σ (cumulative step length adaptation):
+  Compare the cumulative path length |ps| to what a random walk would
+  produce: chiN = sqrt(n) * (1 - 1/(4n) + 1/(21n²))
+
+  If |ps| > chiN: mean is moving consistently in one direction
+                  → steps are too small → σ increases
+  If |ps| < chiN: mean is zigzagging (overshooting)
+                  → steps are too large → σ decreases
+
+  σ self-tunes with no user input required. The convergence plot
+  (sigma vs. generation) shows this decay clearly.
+
+STEP 7 — CHECK CONVERGENCE:
+  Stop if any of the following:
+  - σ < 1e-5: distribution has collapsed, no more progress possible
+  - Best J changed by less than 1e-6 $/s over last 10 generations
+  - 500 generations elapsed (maximum limit)
+
+
+--------------------------------------------------------------------------------
+  5. THE 13 DESIGN VARIABLES AND WHY EACH ONE
+--------------------------------------------------------------------------------
+
+  #    Variable              Bounds           Why these bounds
+  ─────────────────────────────────────────────────────────────────────────
+   1   Aspect Ratio AR       [4.0, 10.0]      Below 4: too much induced drag, hard to build
+                                              Above 10: tip chord approaches zero
+
+   2   Taper ratio           [0.50, 0.80]     Below 0.50: tip stalls before root (unsafe)
+                                              Above 0.80: near-elliptic, diminishing returns
+
+   3   Wing sweep (c/4)      [0.0, 35.0 deg]  Above 35: no transonic benefit at RC speeds;
+                                              high sweep moves CG aft → pitch instability
+
+   4   Root twist (washout)  [-3.0, -1.0 deg] FORCED NEGATIVE: tip must stall after root.
+                                              Lower bound -1 deg: minimum 1 deg washout
+                                              always enforced for stall protection.
+                                              Upper bound -3 deg: more twist = more drag
+
+   5   Wing loading W/S      [20, 90 N/m²]   Below 20: enormous wing, impractical to build
+                                              Above 90: stall speed exceeds 12 m/s constraint
+
+   6   xLE root position     [0.03, 0.30 m]  Controls CG location → controls static margin.
+                                              Wing too far forward: high trim drag.
+                                              Wing too far back: CG aft of NP → unstable.
+
+   7   Vertical fin AR       [2.0, 2.5]      Originally 3.5, reduced because optimizer produced
+                                              disproportionately tall winglets relative to
+                                              wing tip chord.
+
+   8   Vertical fin taper    [0.30, 0.70]    Manufacturing and structural practicality limits.
+
+   9   Vertical fin sweep    [20, 45 deg]    Originally 60 deg, reduced for geometric
+                                              proportionality. High sweep shifts fin
+                                              aerodynamic center too far aft.
+
+  10   Cruise speed          [20, 28 m/s]    Below 20: barely above stall (margin factor 1.3x)
+                                              Above 28: propulsion system undersized for speed
+
+  11   Payload volume Vp     [1, 30 L]       Upper bound = maximum that physically fits inside
+                                              the fuselage airfoil cross-section.
+                                              Optimizer always converges to 30 L.
+
+  12   Fuselage half-width   [0.05, 0.20 m]  Physical size limit of fuselage construction
+
+  13   Fuselage length       [0.60, 1.00 m]  Lower bound: must fit motor, battery, payload.
+                                              Upper bound: 1 m reference design.
+
+Variable 11 (payload volume) always converges to its upper bound of 30 L.
+This tells you the revenue coefficient for volume ($300/m³) dominates the
+structural cost penalty at any physically achievable fuselage size. The
+scoring function is volume-dominated.
+
+
+--------------------------------------------------------------------------------
+  6. WHAT HAPPENS INSIDE EACH EVALUATION — THE 19-STEP PIPELINE
+--------------------------------------------------------------------------------
+
+When the optimizer tests one candidate design, it runs this pipeline:
+
+  Step  1   Decode 13 normalized [0,1] values → physical units
+  Step  2   Estimate gross weight from empty-weight fraction model (fe model)
+  Step  3   wingGeometryDesign → span, root chord, tip chord, MAC
+  Step  4   CHECK: tip chord > 5 cm, total wingspan < 2.5 m    REJECT if violated
+  Step  5   CHECK: payload volume fits inside fuselage airfoil  REJECT if violated
+  Step  6   Evaluate root and tip airfoil surrogates at cruise Re
+            (no XFOIL runtime call — uses pre-computed database)
+  Step  7   twistFunctionPanknin → required spanwise washout distribution
+  Step  8   verticalSurfaceDesign → winglet/fin geometry
+  Step  9   CHECK: fin height < 50% semispan                    REJECT if violated
+            CHECK: fin root chord < 1.2x wing tip chord         REJECT if violated
+  Step 10   Scale wing and fin structural masses (physics-based scaling laws)
+  Step 11   aircraftMassProperties → actual CG position and inertia tensor
+  Step 12   aeroPolarAircraft → CD0, L/D, cruise CL and CD (drag build-up)
+  Step 13   CHECK: stall speed Vs <= 12 m/s                     REJECT if violated
+  Step 14   CHECK: takeoff ground roll <= 138 m (Raymer formula) REJECT if violated
+  Step 15   CHECK: climb T/W feasible at V = 13 m/s             REJECT if violated
+  Step 16   CHECK: turn T/W feasible at V = 13 m/s, n = 1.5    REJECT if violated
+  Step 17   dynamicStabilityAVL → run AVL binary, parse eigenvalues,
+            compute static margin, classify flight modes
+  Step 18   Apply stability penalties (static margin band + modal damping)
+  Step 19   energyCalc + profitPerUnitTime → compute J
+            Return -J as the objective (CMA-ES minimizes, we want to maximize J)
+
+Steps 1-16 take ~0.1 seconds total.
+Step 17 (AVL) takes ~2 seconds and completely dominates runtime.
+This is why the full optimization takes 6-10 hours.
+
+
+--------------------------------------------------------------------------------
+  7. HARD CONSTRAINTS VS. SOFT PENALTIES — WHY THE DIFFERENCE
+--------------------------------------------------------------------------------
+
+HARD CONSTRAINTS (return 1e6 immediately, design rejected):
+
+  These are binary — a design either works or it does not. Using a penalty
+  here would be incorrect because there is no meaningful gradient pointing
+  back toward feasibility from inside the infeasible region.
+
+  Constraint                   Why it is hard
+  ──────────────────────────────────────────────────────────────────────
+  Tip chord >= 5 cm            Below this you cannot physically build the wing
+  Wingspan <= 2.5 m            Transportation limit — must fit in a car
+  Stall speed <= 12 m/s        Competition rule — hard boundary, no partial credit
+  Takeoff <= 138 m             Physical runway length
+  Climb T/W feasible           Aircraft must be able to climb — binary requirement
+  Turn T/W feasible            Aircraft must be able to turn at 1.5g — binary
+  Payload fits in fuselage     Physical geometry — either it fits or it does not
+
+SOFT PENALTIES (quadratic, added to the objective value):
+
+  Static margin uses a soft quadratic penalty because AVL has numerical noise
+  of +/-0.5% due to panel discretization. A hard cutoff at exactly 5% would
+  cause discontinuous jumps that confuse the optimizer. The quadratic shape
+  provides a smooth gradient guiding the optimizer toward the feasible region:
+
+    SM < 5%:   penalty = 5.0 * (5 - SM)²    strongly pushes toward SM >= 5%
+    SM > 13%:  penalty = 5.0 * (SM - 13)²   pushes toward SM <= 13%
+
+  The coefficient 5.0 was chosen so that being 2% outside the band costs
+  ~$0.50/hr of equivalent profit — enough to strongly discourage it without
+  making it impossible to pass through during search.
+
+DYNAMIC STABILITY FLAT PENALTIES:
+
+  These use flat (step) penalties because modal damping has engineering
+  thresholds from MIL-STD-1797 that are categorical, not continuous.
+
+    Short-period zeta < 0:     +$0.50/hr   Divergent pitch — uncontrollable
+    Short-period zeta < 0.25:  +$0.15/hr   Underdamped — difficult to control
+    Phugoid zeta < 0:          +$0.10/hr   Unstable speed-altitude exchange
+    Dutch roll zeta < 0:       +$0.15/hr   Unstable yaw-roll coupling
+    Trim deflection > 15 deg:  +0.05 * (excess deg)   Excessive elevon trim drag
+
+  The magnitudes are deliberately calibrated: the worst instability (divergent
+  short period, +$0.50/hr) costs more than a significant fraction of total
+  profit (~$23/hr), making it essentially prohibitive for the optimizer to
+  accept such a design.
+
+
+--------------------------------------------------------------------------------
+  8. THE KEY ENGINEERING TRADEOFFS THE OPTIMIZER RESOLVED
+--------------------------------------------------------------------------------
+
+AR vs. structural weight:
+  Pure aerodynamics wants AR = 8-9 (minimum induced drag, CD ∝ 1/AR).
+  But higher AR increases wingspan and structural mass proportionally.
+  The optimizer settled at AR ≈ 5.35 because the structural mass penalty
+  in the profit function (cWg*Wg/tl) dominates once wingspan exceeds ~1.5 m.
+
+Wing loading vs. stall:
+  Higher W/S means a smaller, lighter wing and less drag. The stall
+  constraint (Vs <= 12 m/s) puts a hard ceiling on W/S for a given CLmax.
+  The optimizer always pushes W/S to that ceiling — the optimal design
+  sits right at the stall constraint boundary at W/S ≈ 86-88 N/m².
+  This is a classic constraint-active result.
+
+Static margin vs. trim drag:
+  Higher SM means the CG is further forward, requiring more trailing-edge-up
+  elevon deflection to trim, which creates additional drag. Lower SM saves
+  energy but risks instability. The optimizer targets SM ≈ 7.5% (midpoint
+  of the 5-13% soft penalty band) — this is the quantified energy-versus-
+  stability tradeoff embedded in the soft penalty coefficients.
+
+Washout vs. L/D:
+  More washout (larger negative twist) protects against tip stall and
+  satisfies the flying-wing stability requirement (Cmα < 0). But washout
+  reduces tip lift, so the wing must fly at a higher root angle of attack
+  for the same total lift, increasing induced drag. The optimizer chose
+  -2.33 degrees — the minimum needed to satisfy the SM constraint via
+  the Panknin method. Any less and SM falls below 5%.
+
+Payload volume vs. fuselage weight:
+  The scoring function strongly rewards larger cargo bays. The optimizer
+  always maximizes fuselage half-width (0.200 m) and pushes fuselage
+  length to 1.0 m. Every physically achievable cargo bay improvement
+  is worth taking, given the $300/m³ revenue coefficient.
+
+
+--------------------------------------------------------------------------------
+  9. CONVERGENCE — HOW WE KNOW THE OPTIMIZER IS DONE
+--------------------------------------------------------------------------------
+
+Two stopping criteria are checked each generation:
+
+  1. Step size convergence: sigma < 1e-5
+     The Gaussian distribution has collapsed to a single point. Every sample
+     lands essentially at the same location. The optimizer has found a local
+     basin and cannot meaningfully explore further.
+
+  2. Objective plateau: range of best J over last 10 generations < 1e-6 $/s
+     The landscape is flat enough that further iterations produce no improvement.
+
+In practice, convergence happens around generation 200-300 with sigma dropping
+from the initial 0.10 to below 1e-3 steadily. The convergence plot produced
+at the end of the run shows sigma vs. generation — a steady exponential decay
+indicates healthy convergence. A plateau followed by a drop indicates the
+optimizer escaped a local optimum and found a better basin.
+
+Maximum limit: 500 generations (~7 hours). If neither stopping criterion
+triggers, the best solution found by generation 500 is returned.
+
+
+--------------------------------------------------------------------------------
+  10. ONE-SENTENCE SUMMARY
+--------------------------------------------------------------------------------
+
+We use CMA-ES because the profit landscape is non-convex, multi-disciplinary,
+and expensive to evaluate — gradient-based methods fail on non-smooth constraint
+boundaries, genetic algorithms waste too many evaluations on a 7-hour budget,
+and CMA-ES uniquely learns the shape of the 13-dimensional search space as it
+runs, converging reliably in ~13,000 evaluations while enforcing flight safety
+through a two-tier system of hard geometric and performance cutoffs combined
+with soft quadratic stability penalties calibrated to MIL-STD-1797 handling
+quality requirements.
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
