@@ -62,7 +62,7 @@
 
 clc; clear; close all;
 
-timestamp = datetime('now','Format','yyyy-MM-dd HH:mm:ss');
+timestamp = datetime('now','Format','yyyy-MM-d HH:mm:ss');
 fprintf('========= Main Sizing Code executed at: %s =======\n\n', string(timestamp));
 
 % –– top of main.m ––
@@ -76,7 +76,7 @@ diary(logFile);
 
 %% =================== Run Flags =========================
 % Figures
-showPlots       = false;  % true = show all figures throughout the script
+showPlots       = true;  % true = show all figures throughout the script
 
 % AVL geometry viewer (opens interactive Terminal window — requires manual close)
 viewGeometry    = false;   % true = open AVL 3D viewer before stability run
@@ -544,9 +544,9 @@ wingIn.y_root_m   = 0.0746; % profit optimizer (= cb_halfwidth)
 wingIn.z_root_m   = 0.0;
 
 % Elevon geometry — CMA-ES optimized (runCSopt)
-wingIn.eta_cs_start  = 0.309;   % starts at 30.9% semispan — CS optimizer result
-wingIn.eta_cs_end    = 0.759;   % ends at 75.9% semispan  — CS optimizer result
-wingIn.cs_chord_frac = 0.450;   % 45.0% of local chord    — CS optimizer result
+wingIn.eta_cs_start  = 0.600;   % starts at 60% semispan — outboard per professor recommendation
+wingIn.eta_cs_end    = 0.950;   % ends at 95% semispan   — as far outboard as possible
+wingIn.cs_chord_frac = 0.450;   % 45.0% of local chord   — CS optimizer result
 
 wingOut = wingGeometryDesign(wingIn);
 Swet_wing = 2.04 * wingOut.S_ref_m2;  % overwrite placeholder above
@@ -818,11 +818,11 @@ vertIn.z_root_v_m   = wingIn.z_root_m;
 vertIn.airfoilName = 'NACA0010';
 
 % ---------- Rudder sizing ----------
-vertIn.rudder.enable      = true;
-vertIn.rudder.useTopOnly  = true;   % best match for winglet-like fin
-vertIn.rudder.eta_start   = 0.15;   % start at 15% of top exposed height
-vertIn.rudder.eta_end     = 0.95;   % end near tip
-vertIn.rudder.cf_root     = 0.493;  % rudder chord — CS optimizer result (maxed out at bound; Cndr≈0 on delta winglet — needs fin geometry revision for real yaw authority)
+vertIn.rudder.enable      = false;  % removed — delta winglet at 65° sweep gives Cndr≈0, no useful yaw authority
+vertIn.rudder.useTopOnly  = true;
+vertIn.rudder.eta_start   = 0.15;
+vertIn.rudder.eta_end     = 0.95;
+vertIn.rudder.cf_root     = 0.493;
 vertIn.rudder.cf_tip      = 0.493;
 
 % Run function
